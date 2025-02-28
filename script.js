@@ -4,10 +4,11 @@ class PointerInteraction { // #private  $data  _user
     #hold = {}; #revert = false; #callback;
     constructor (targets, custom) {
         Object.assign(this, new O(custom).map(([k, v]) => [`_${k}`, v]));
-        this._scroll && PointerInteraction.to.elements(targets).forEach(el => {
+        PointerInteraction.to.elements(targets).forEach(el => {
+            if (!this._scroll) return el.parentElement.style.touchAction = 'none';
             el.classList.add('pointer-scroll');
             el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
-        });
+        }); 
         addEventListener('pointerdown', ev => this.#press(ev, [targets].flat()));
         Q('#pointer-interaction') || Q('head').append(E('style', {id: 'pointer-interaction'}, this.#css));
     }
@@ -25,7 +26,7 @@ class PointerInteraction { // #private  $data  _user
             x: ev.x, y: ev.y,
             sx: this.target.scrollLeft, sy: this.target.scrollTop, scrollY,
             userTransform: new DOMMatrix(getComputedStyle(this.target).transform),
-            target: this.target.getBoundingClientRect()
+            target: PointerInteraction.getBoundingPageRect(this.target)
         };
 
         this._dblclick && (new Date() - this.target.lastPressed <= 500) && this._dblclick(new DoubleClick(this)).fire();
@@ -66,7 +67,7 @@ class PointerInteraction { // #private  $data  _user
         },
         findGoal: () => {
             let goal = PointerInteraction.to.elements(this._drop.goal) //live, includes cloned
-                .find(g => g != this.target && g.matches(':hover'));
+                .find(el => el != this.target && PointerInteraction.containsPointer(el, this.$drag.x, this.$drag.y));
             if (goal == this.goal) return; 
             this.goal?.classList.remove('pointer-goal');
             this.goal = goal;
@@ -92,7 +93,7 @@ class PointerInteraction { // #private  $data  _user
             this.#revert = false;
             this.target.classList.add('pointer-animate');
             this.goal.classList.add('pointer-animate');
-            let {x, y} = this.goal.getBoundingClientRect();
+            let {x, y} = PointerInteraction.getBoundingPageRect(this.goal);
             this.#translate({x: x - this.$press.target.x, y: y - this.$press.target.y});
             this.#translate({x: this.$press.target.x - x, y: this.$press.target.y - y}, this.goal);
             this.#callback = this.#commitSwap;
@@ -133,16 +134,20 @@ class PointerInteraction { // #private  $data  _user
         goal.style.transform = this.$lift.userTransform; 
     }
     #css = `
-        .pointer-goal,.pointer-animate {z-index:98;}
+        .pointer-goal,.pointer-animate {
+            z-index:98;
+        }
         .pointer-target {
-            -webkit-user-drag:none; 
             z-index:99;
-            
             &,* {pointer-events:none;}
-        } 
+        }
+        :has(.pointer-target) {
+            user-select:none;
+        }
         .pointer-scroll {
             overflow:scroll;
             scrollbar-width:none;
+            touch-action:none;
             
             &:has(.pointer-target,.pointer-animate) {
                 width:min-content;
@@ -152,12 +157,19 @@ class PointerInteraction { // #private  $data  _user
         }
         .pointer-animate {
             transition:transform .5s;
-            &,:has(&) {pointer-events:none;}
+            :has(&) {pointer-events:none;}
         }
     `;
     static to = {
         elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el)
     }
+    static getBoundingPageRect = el => (({x, y}) => ({
+        x: x + scrollX,
+        y: y + scrollY,
+    }))(el.getBoundingClientRect())
+    static containsPointer = (el, moveX, moveY) => el && (({x, y, width, height}) => 
+        moveX > x && moveY > y && moveX < x+width && moveY < y+height
+    )(el.getBoundingClientRect())
 }
 class Hold {
     constructor(PI) {
