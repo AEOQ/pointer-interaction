@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<title>Pointer Interaction</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="/AEOQ.js"></script>
+<style>
+    * {user-select:none;}
+    summary+code {
+        margin-bottom:1em;
+        display:block;
+    }
+    div {
+        display:flex;
+        code {
+            min-width:22em;
+        }
+    }
+    #stock {
+        display:flex;
+        padding:1em 0;
+    }
+    .zone {
+        background:silver;
+        height:5em;
+        padding:1em 0;
+    }
+    span {
+        display:inline-block;
+        min-width:3em; max-width:3em; height:3em;
+        border:.2em solid;
+        margin:0 .5em;
+    }
+    .red {border-color:red;}
+    .lime {border-color:lime;}
+    .blue {border-color:blue;}
+    .aqua {border-color:aqua;}
+    .magenta {border-color:magenta;}
+    .yellow {border-color:yellow;}
+    .pointer-target {background:lightgoldenrodyellow;}
+    .red.pointer-target {background:hsl(var(--hue,0),100%,50%);}
+    .held {border-style:dashed;}
+    .pointer-goal {background:green;}
+</style>
+
+<details>
+    <summary>Show code</summary>
+    <code>
+        &lt;script type="module"&gt;
+        import {PointerInteraction} from './script.js';
+    </code>
+    <div></div>
+</details>
+<p>
+<h2>Stock</h2>
+<section id="stock"></section>
+<h2>Zone 1</h2>
+<section class="zone"></section>
+<h2>Zone 2</h2>
+<section class="zone"></section>
+<h2>Zone 3</h2>
+<section class="zone"></section>
+<script>
+    for (let i = 0; i <= 50; i++) Q('#stock').append(E('span', `${i}`, {
+        classList: ['red','lime','blue','aqua','magenta','yellow'][Math.floor(Math.random()*6)],
+        style: {transform: 'rotate(45deg)'}
+    }));
+</script>
+<script type="module">
+    import {PointerInteraction} from './script.js';
+    new PointerInteraction('details div', {scroll: {x: true}});
+    new PointerInteraction('#stock', {scroll: {x: true}});
+    new PointerInteraction('.lime', {
+        drag: PI => PI.drag.to.translate(),
+        lift: PI => PI.lift.to.revert()
+    });
+    new PointerInteraction('.blue', {
+        drop: {goal: '.zone'},
+        lift: PI => PI.lift.to.clone()
+    });
+    new PointerInteraction('.aqua', {
+        drop: {goal: '.zone'},
+        lift: PI => PI.lift.to.transfer()
+    });
+    new PointerInteraction('.magenta', {
+        drop: {goal: 'span'},
+        lift: PI => PI.lift.to.swap()
+    });
+    new PointerInteraction('.yellow', {
+        dblclick: dblclick => dblclick.to((PI, target) => target.style.transform = null),
+    });
+    new PointerInteraction('.red', {
+        hold: hold => hold.for(500).to((PI, target) => target.classList.add('held')),
+        drop: {goal: '.zone'},
+        drag: (PI, target) => target.style.setProperty('--hue', PI.$drag.x - PI.$press.x),
+        lift: (PI, target) => target.matches('.held') && PI.lift.to.clone()
+    });
+</script>
+<script>
+    Q('details div').replaceChildren(...Q('script[type=module]').textContent.split('new').slice(1).map(code => 
+        E('code', {innerHTML: `new${code.replaceAll(/(?<=\n)\s+/g, spaces => new Array(spaces.length/2).fill('&nbsp;').join('')).replaceAll(/\n/g, '<br>')}`})
+    ));
+</script>
