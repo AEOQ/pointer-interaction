@@ -75,7 +75,10 @@ class PointerInteraction { // #private  $data  _user
         }
     }}
     #lift () {
-        this.goal && (this.$lift = {userTransform: new DOMMatrix(getComputedStyle(this.goal).transform)});
+        if (this.goal) {
+            this.$lift = {userTransform: new DOMMatrix(getComputedStyle(this.goal).transform)};
+            this.goal.style.touchAction = 'none';
+        }
         this._lift?.(this, this.target, this.goal);
         this.#revert && this.lift.to.revert();
         this.#reset();
