@@ -36,10 +36,10 @@
     .aqua {border-color:aqua;}
     .magenta {border-color:magenta;}
     .yellow {border-color:yellow;}
-    .pointer-target {background:lightgoldenrodyellow;}
-    .red.pointer-target {background:hsl(var(--hue,0),100%,50%);}
-    .held {border-style:dashed;}
-    .pointer-goal {background:green;}
+    .PI-target {background:lightgoldenrodyellow;}
+    .red.PI-target {background:hsl(var(--hue,0),100%,50%);}
+    .red.held {background:green;}
+    .PI-goal {background:chartreuse;}
 </style>
 
 <details>
@@ -68,7 +68,6 @@
 <script type="module">
     import {PointerInteraction} from './script.js';
     new PointerInteraction('details div', {scroll: {x: true}});
-    new PointerInteraction('#stock', {scroll: {x: true}});
     new PointerInteraction('.lime', {
         drag: PI => PI.drag.to.translate(),
         lift: PI => PI.lift.to.revert()
@@ -77,23 +76,28 @@
         drop: {goal: '.zone'},
         lift: PI => PI.lift.to.clone()
     });
+    new PointerInteraction('.magenta,.zone span', {
+        drop: {goal: 'span'},
+        lift: PI => PI.lift.to.swap()
+    });
     new PointerInteraction('.aqua', {
         drop: {goal: '.zone'},
         lift: PI => PI.lift.to.transfer()
     });
-    new PointerInteraction('.magenta', {
-        drop: {goal: 'span'},
-        lift: PI => PI.lift.to.swap()
-    });
     new PointerInteraction('.yellow', {
-        dblclick: dblclick => dblclick.to((PI, target) => target.style.transform = null),
+        click: click => click
+            .for(2).to(PI => PI.target.style.transform = null)
+            .for(3).to(PI => PI.target.style.borderRadius = '9em'),
     });
     new PointerInteraction('.red', {
-        hold: hold => hold.for(500).to((PI, target) => target.classList.add('held')),
+        hold: hold => hold
+            .for(0.5).to(PI => PI.target.classList.add('held'))
+            .for(1.5).to(PI => PI.target.style.background = 'black'),
         drop: {goal: '.zone'},
-        drag: (PI, target) => target.style.setProperty('--hue', PI.$drag.x - PI.$press.x),
-        lift: (PI, target) => target.matches('.held') && PI.lift.to.clone()
+        drag: PI => PI.target.style.setProperty('--hue', PI.$drag.x - PI.$press.x),
+        lift: PI => PI.target.matches('.held') && PI.lift.to.clone()
     });
+    new PointerInteraction('#stock', {scroll: {x: true}});
 </script>
 <script>
     Q('details div').replaceChildren(...Q('script[type=module]').textContent.split('new').slice(1).map(code => 

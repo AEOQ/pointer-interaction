@@ -6,7 +6,7 @@ class PointerInteraction { // #private  $data  _user
         Object.assign(this, new O(custom).map(([k, v]) => [`_${k}`, v]));
         PointerInteraction.to.elements(targets).forEach(el => {
             if (!this._scroll) return el.parentElement.style.touchAction = 'none';
-            el.classList.add('pointer-scroll');
+            el.classList.add('PI-scroll');
             el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
         }); 
         addEventListener('pointerdown', ev => this.#press(ev, [targets].flat()));
@@ -19,8 +19,8 @@ class PointerInteraction { // #private  $data  _user
     #press (ev, targets) {
         this.target = targets.some(t => typeof t == 'string' ? ev.target.matches(t) : ev.target == t) ?
             ev.target : typeof targets[0] == 'string' ? ev.target.closest(targets[0]) : null;
-        if (!this.target) return;
-        this.target.classList.add('pointer-target');
+        if (!this.target || this.target.Q('.PI-target')) return this.#reset();
+        this.target.classList.add('PI-target');
 
         this.$press = {
             x: ev.x, y: ev.y,
@@ -29,8 +29,7 @@ class PointerInteraction { // #private  $data  _user
             target: PointerInteraction.getBoundingPageRect(this.target)
         };
 
-        this._dblclick && (new Date() - this.target.lastPressed <= 500) && this._dblclick(new DoubleClick(this)).fire();
-        this.target.lastPressed = new Date();
+        this._click && this.press.to.count() && this._click(new Click(this)).fire(this.target.clicked);
         this._hold && (this.#hold.timer = this._hold(new Hold(this)).schedule());
 
         this._press?.(this, this.target);
@@ -38,16 +37,21 @@ class PointerInteraction { // #private  $data  _user
         this.#events.pointermove = ev => this.#drag(ev);
         this.#events.pointerup = this.#events.pointercancel = () => this.#lift();
     }
+    press = {to: {
+        count: () => [this.target.clicked, this.target.lastClicked] = 
+            [new Date() - this.target.lastClicked <= 500 ? this.target.clicked + 1 : 1, new Date()]
+    }}
     #drag (ev) {
         ev.preventDefault();
-        if (this.target.Q('.pointer-target')) return this.#reset();
+        if (this.target.Q('.PI-target')) return this.#reset();
         
         this.$drag = {x: ev.x, y: ev.y, dx: ev.x-this.$press.x, dy: ev.y-this.$press.y};
         if (Math.hypot(this.$drag.dx, this.$drag.dy) < 5) return;
 
-        clearTimeout(this.#hold.timer);
+        this.#hold.timer?.forEach(timer => clearTimeout(timer));
         this._scroll && this.drag.to.scroll(this._scroll === true ? undefined : this._scroll);
         this._drop && [this.#translate(), this.drag.to.scrollPage(), this.drag.to.findGoal()];
+        
         this._drag?.(this, this.target, this.goal);
     }
     drag = {to: {
@@ -68,10 +72,11 @@ class PointerInteraction { // #private  $data  _user
         findGoal: () => {
             let goal = PointerInteraction.to.elements(this._drop.goal) //live, includes cloned
                 .find(el => el != this.target && PointerInteraction.containsPointer(el, this.$drag.x, this.$drag.y));
+            goal?.Q('.PI-goal') && (goal = null);
             if (goal == this.goal) return; 
-            this.goal?.classList.remove('pointer-goal');
+            this.goal?.classList.remove('PI-goal');
             this.goal = goal;
-            goal?.classList.add('pointer-goal');
+            goal?.classList.add('PI-goal');
         }
     }}
     #lift () {
@@ -80,43 +85,43 @@ class PointerInteraction { // #private  $data  _user
             this.goal.style.touchAction = 'none';
         }
         this._lift?.(this, this.target, this.goal);
-        this.#revert && this.lift.to.revert();
+        this.#revert && this.goal !== null && this.lift.to.revert();
         this.#reset();
     }
     lift = {to: {
         transfer: cloned => {
             if (!this.goal || this.goal == this.target.parentElement) return;
             let appended = this.goal.appendChild(cloned ?? this.target);
-            appended.classList.remove('pointer-target');
+            appended.classList.remove('PI-target');
             appended.style.transform = this.$press.userTransform;
         },
         clone: () => this.lift.to.transfer(this.target.cloneNode(true)),
         swap: () => {
             if (!this.goal) return;
             this.#revert = false;
-            this.target.classList.add('pointer-animate');
-            this.goal.classList.add('pointer-animate');
+            this.target.classList.add('PI-animate');
+            this.goal.classList.add('PI-animate');
             let {x, y} = PointerInteraction.getBoundingPageRect(this.goal);
             this.#translate({x: x - this.$press.target.x, y: y - this.$press.target.y});
             this.#translate({x: this.$press.target.x - x, y: this.$press.target.y - y}, this.goal);
             this.#callback = this.#commitSwap;
         },
         revert: () => {
-            this.target.classList.add('pointer-animate');
+            this.target.classList.add('PI-animate');
             this.target.style.transform = this.$press.userTransform;
         }
     }}
     #reset () {
-        clearTimeout(this.#hold.timer);
+        this.#hold.timer?.forEach(timer => clearTimeout(timer));
         let [target, goal] = [this.target, this.goal];
         this.target = this.goal = null;
         this.#events.remove();
-        target.classList.remove('pointer-target');
-        goal?.classList.remove('pointer-goal');
-        Q('.pointer-animate') && setTimeout(() => {
+        target?.classList.remove('PI-target');
+        goal?.classList.remove('PI-goal');
+        Q('.PI-animate') && setTimeout(() => {
             this.#callback?.(target, goal);
-            target.classList.remove('pointer-animate');
-            goal?.classList.remove('pointer-animate');
+            target?.classList.remove('PI-animate');
+            goal?.classList.remove('PI-animate');
             this.#callback = null;
         }, 500);
     }
@@ -137,28 +142,26 @@ class PointerInteraction { // #private  $data  _user
         goal.style.transform = this.$lift.userTransform; 
     }
     #css = `
-        .pointer-goal,.pointer-animate {
-            z-index:98;
-        }
-        .pointer-target {
-            z-index:99;
+        .PI-target {
+            z-index:99; position:relative;
             &,* {pointer-events:none;}
         }
-        :has(.pointer-target) {
+        :has(.PI-target) {
             user-select:none;
         }
-        .pointer-scroll {
+        .PI-scroll {
             overflow:scroll;
             scrollbar-width:none;
             touch-action:none;
             
-            &:has(.pointer-target,.pointer-animate) {
+            &:has(.PI-target,.PI-animate) {
                 width:min-content;
                 overflow:visible;
                 transform:translate(calc(var(--scrolledX,0)*-1px),calc(var(--scrolledY,0)*-1px));
             }
         }
-        .pointer-animate {
+        .PI-animate {
+            z-index:98; position:relative;
             transition:transform .5s;
             :has(&) {pointer-events:none;}
         }
@@ -174,19 +177,21 @@ class PointerInteraction { // #private  $data  _user
         moveX > x && moveY > y && moveX < x+width && moveY < y+height
     )(el.getBoundingClientRect())
 }
-class Hold {
-    constructor(PI) {
-        this.PI = PI;
-        this.for = ms => (this.ms = ms) && this;
-        this.to = action => (this.action = action) && this;
-    }
-    schedule = () => setTimeout(() => this.action?.(this.PI, this.PI.target), this.ms);
+class HoldClick {
+    constructor(PI) {this.PI = PI;}
+    actions = [];
+    for = param => this.actions.push([param]) && this;
+    to = action => this.actions.at(-1).push(action) && this;
 }
-class DoubleClick {
+class Hold extends HoldClick {
+    constructor(PI) {super(PI);}
+    schedule = () => this.actions.map(([s, action]) => setTimeout(() => action(this.PI, this.PI.target), s*1000));
+}
+class Click extends HoldClick {
     constructor(PI) {
-        this.PI = PI;
-        this.to = action => (this.action = action) && this;
+        super(PI);
+        this.target = PI.target;
     }
-    fire = () => this.action?.(this.PI, this.PI.target) 
+    fire = clicked => this.actions.find(([times]) => clicked == times)?.[1](this.PI, this.target);
 }
 export {PointerInteraction}
