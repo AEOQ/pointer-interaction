@@ -62,7 +62,7 @@ class PointerInteraction { // #private  $data  _user
         translate: (axis = {x: true, y: true}) => this.#translate(new O(['x','y'].map(a => {
             let d = axis[a] === false ? 0 : this.$drag[`d${a}`];
             d && ['min', 'max'].forEach(m => typeof axis[a]?.[m] == 'function' && (axis[a][m] = axis[a][m](this.target)));
-            return [a, Math.max(axis[a].min ?? -Infinity, Math.min(d, axis[a].max ?? Infinity))];
+            return [a, Math.max(axis[a]?.min ?? -Infinity, Math.min(d, axis[a]?.max ?? Infinity))];
         }))),
         scrollPage: () => {
             let [proportion, bottomed] = [this.$drag.y / innerHeight, scrollY + innerHeight >= document.body.offsetHeight + 100];
