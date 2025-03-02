@@ -143,7 +143,7 @@ class PointerInteraction { // #private  $data  _user
         goal.style.transform = this.$lift.userTransform; 
         PointerInteraction.swapping = false;
     }
-    static #css = `
+    static #css = place => place.Q('#PI') || place.append(E('style', {id: 'PI'}, `
         .PI-target {
             z-index:99; position:relative;
             &,* {pointer-events:none;}
@@ -167,7 +167,7 @@ class PointerInteraction { // #private  $data  _user
             transition:transform .5s;
             :has(&) {pointer-events:none;}
         }
-    `;
+    `));
     static to = {
         elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el).filter(el => el)
     }
@@ -175,19 +175,20 @@ class PointerInteraction { // #private  $data  _user
         x: x + scrollX,
         y: y + scrollY,
     }))(el.getBoundingClientRect())
-    static containsPointer = (el, moveX, moveY) => el && (({x, y, width, height}) => 
-        moveX > x && moveY > y && moveX < x+width && moveY < y+height
+    static containsPointer = (el, px, py) => el && (({x, y, width, height}) => 
+        px > x && py > y && px < x+width && py < y+height
     )(el.getBoundingClientRect())
 
     static events = settings => {
         settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
-        Q('head').append(E('style', {id: 'pointer-interaction'}, PointerInteraction.#css));
         addEventListener('pointerdown', ev => {
             let target, actions = settings.find(([targets]) => typeof targets == 'string' ? 
                 ev.target.matches(targets) : [targets].flat().includes(ev.target)
             );
             actions ??= settings.find(([targets]) => typeof targets == 'string' && (target = ev.target.closest(targets)));
-            actions && actions[1].execute(ev, target);
+            if (!actions) return;
+            PointerInteraction.#css(ev.target.getRootNode() instanceof ShadowRoot ? ev.target.getRootNode() : document.head);
+            actions[1].execute(ev, target);
         });
     }
 }
