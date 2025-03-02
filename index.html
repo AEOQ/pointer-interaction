@@ -8,27 +8,26 @@
         margin-bottom:1em;
         display:block;
     }
-    div {
+    ul {
+        all:unset;
         display:flex;
-        code {
-            min-width:22em;
-        }
     }
     #stock {
-        display:flex;
-        padding:1em 0;
+        padding:2em 0;
     }
     .zone {
         background:silver;
         height:5em;
         padding:1em 0;
     }
-    span {
-        display:inline-block;
+    li {
+        all:unset;
         min-width:3rem; max-width:3rem; height:3rem;
         border:.2rem solid;
         margin:0 .5rem;
-        font-size:3em;
+        span {
+            display:inline-block; font-size:2em;
+        }
     }
     .red {border-color:red;}
     .lime {border-color:lime;}
@@ -45,62 +44,62 @@
 <details>
     <summary>Show code</summary>
     <code>
-        &lt;script type="module"&gt;
-        import {PointerInteraction} from './script.js';
     </code>
-    <div></div>
 </details>
 <p>
 <h2>Stock</h2>
-<section id="stock"></section>
+<ul id="stock"></ul>
 <h2>Zone 1</h2>
-<section class="zone"></section>
+<ul class="zone"></ul>
 <h2>Zone 2</h2>
-<section class="zone"></section>
+<ul class="zone"></ul>
 <h2>Zone 3</h2>
-<section class="zone"></section>
+<ul class="zone"></ul>
 <script>
-    for (let i = 0; i <= 50; i++) Q('#stock').append(E('span', `${i}`, {
-        classList: ['red','lime','blue','aqua','magenta','yellow'][Math.floor(Math.random()*6)],
-        style: {transform: 'rotate(45deg)'}
-    }));
+    for (let i = 0; i <= 50; i++) Q('#stock').append(
+        E('li', [
+            E('span', `${i}`, {style: {transform: 'rotate(-45deg)'}})
+        ], {
+            classList: ['red','lime','blue','aqua','magenta','yellow'][Math.floor(Math.random()*6)],
+            style: {transform: 'rotate(45deg)'}}
+        ));
 </script>
 <script type="module">
     import {PointerInteraction} from './script.js';
-    new PointerInteraction('details div', {scroll: {x: true}});
-    new PointerInteraction('.lime', {
-        drag: PI => PI.drag.to.translate(),
-        lift: PI => PI.lift.to.revert()
-    });
-    new PointerInteraction('.blue', {
-        drop: {goal: '.zone'},
-        lift: PI => PI.lift.to.clone()
-    });
-    new PointerInteraction('.magenta,.zone span', {
-        drop: {goal: 'span'},
-        lift: PI => PI.lift.to.swap()
-    });
-    new PointerInteraction('.aqua', {
-        drop: {goal: '.zone'},
-        lift: PI => PI.lift.to.transfer()
-    });
-    new PointerInteraction('.yellow', {
-        click: click => click
-            .for(2).to(PI => PI.target.style.transform = null)
-            .for(3).to(PI => PI.target.style.borderRadius = '9em'),
-    });
-    new PointerInteraction('.red', {
-        hold: hold => hold
-            .for(0.5).to(PI => PI.target.classList.add('held'))
-            .for(1.5).to(PI => PI.target.style.background = 'black'),
-        drop: {goal: '.zone'},
-        drag: PI => PI.target.style.setProperty('--hue', PI.$drag.x - PI.$press.x),
-        lift: PI => PI.target.matches('.held') && PI.lift.to.clone()
-    });
-    new PointerInteraction('#stock', {scroll: {x: true}});
+    PointerInteraction.events(new O([
+        [Q('ul'), { scroll: { x: true } }]
+    ], {
+        '.lime': {
+            drag: PI => PI.drag.to.translate(),
+            lift: PI => PI.lift.to.revert()
+        },
+        '.blue': {
+            drop: { goal: '.zone' },
+            lift: PI => PI.lift.to.clone()
+        },
+        '.magenta,.zone li': {
+            drop: { goal: 'li' },
+            lift: PI => PI.lift.to.swap()
+        },
+        '.aqua': {
+            drop: { goal: '.zone' },
+            lift: PI => PI.lift.to.transfer()
+        },
+        '.yellow': {
+            click: click => click
+                .for(2).to((_, target) => target.style.transform = null).abort()
+                .for(3).to((_, target) => target.style.borderRadius = '9em'),
+        },
+        '.red': {
+            hold: hold => hold
+                .for(0.5).to(PI => PI.target.classList.add('held'))
+                .for(1.5).to(PI => PI.target.style.background = 'black'),
+            drop: { goal: '.zone' },
+            drag: PI => PI.target.style.setProperty('--hue', PI.$drag.x - PI.$press.x),
+            lift: PI => PI.target.matches('.held') && PI.lift.to.clone()
+        },
+    }));
 </script>
 <script>
-    Q('details div').replaceChildren(...Q('script[type=module]').textContent.split('new').slice(1).map(code => 
-        E('code', {innerHTML: `new${code.replaceAll(/(?<=\n)\s+/g, spaces => new Array(spaces.length/2).fill('&nbsp;').join('')).replaceAll(/\n/g, '<br>')}`})
-    ));
+    Q('details code').innerHTML = Q('script[type=module]').textContent.replaceAll(/(?<=\n)\s+/g, spaces => new Array(spaces.length/2).fill('&nbsp;').join('')).replaceAll(/\n/g, '<br>')
 </script>

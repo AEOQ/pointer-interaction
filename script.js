@@ -1,24 +1,24 @@
 import {A,E,O,Q} from '../AEOQ.mjs';
 
 class PointerInteraction { // #private  $data  _user
-    #hold = {}; #revert = false; #callback;
-    constructor (targets, custom) {
-        Object.assign(this, new O(custom).map(([k, v]) => [`_${k}`, v]));
+    #click; #hold = {}; #revert = false; #callback;
+    constructor (targets, actions) {
+        Object.assign(this, new O(actions).map(([k, v]) => [`_${k}`, v]));
         PointerInteraction.to.elements(targets).forEach(el => {
             if (!this._scroll) return el.parentElement.style.touchAction = 'none';
             el.classList.add('PI-scroll');
             el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
         }); 
-        addEventListener('pointerdown', ev => this.#press(ev, [targets].flat()));
-        Q('#pointer-interaction') || Q('head').append(E('style', {id: 'pointer-interaction'}, this.#css));
     }
     #events = new Proxy(
         Object.defineProperty({}, 'remove', {value() {[...new O(this)].forEach(p => removeEventListener(...p))}, enumerable: false}),
         {set: (target, ...p) => addEventListener(...p) ?? Reflect.set(target, ...p)} //window
     )
-    #press (ev, targets) {
-        this.target = targets.some(t => typeof t == 'string' ? ev.target.matches(t) : ev.target == t) ?
-            ev.target : typeof targets[0] == 'string' ? ev.target.closest(targets[0]) : null;
+    execute (ev, target) {
+        this.target = target ?? ev.target;
+        this.#press(ev);
+    }
+    #press (ev) {
         if (!this.target || this.target.Q('.PI-target')) return this.#reset();
         this.target.classList.add('PI-target');
 
@@ -29,7 +29,7 @@ class PointerInteraction { // #private  $data  _user
             target: PointerInteraction.getBoundingPageRect(this.target)
         };
 
-        this._click && this.press.to.count() && this._click(new Click(this)).fire(this.target.clicked);
+        this._click && this.press.to.count() && (this.#click ??= this._click(new Click(this))) && this.#click.fire(this.target.clicked);
         this._hold && (this.#hold.timer = this._hold(new Hold(this)).schedule());
 
         this._press?.(this, this.target);
@@ -48,7 +48,7 @@ class PointerInteraction { // #private  $data  _user
         this.$drag = {x: ev.x, y: ev.y, dx: ev.x-this.$press.x, dy: ev.y-this.$press.y};
         if (Math.hypot(this.$drag.dx, this.$drag.dy) < 5) return;
 
-        this.#hold.timer?.forEach(timer => clearTimeout(timer));
+        this.#hold.timer?.forEach(clearTimeout);
         this._scroll && this.drag.to.scroll(this._scroll === true ? undefined : this._scroll);
         this._drop && [this.#translate(), this.drag.to.scrollPage(), this.drag.to.findGoal()];
         
@@ -85,7 +85,7 @@ class PointerInteraction { // #private  $data  _user
             this.goal.style.touchAction = 'none';
         }
         this._lift?.(this, this.target, this.goal);
-        this.#revert && this.goal !== null && this.lift.to.revert();
+        this.#revert && !PointerInteraction.swapping && this.lift.to.revert();
         this.#reset();
     }
     lift = {to: {
@@ -98,6 +98,7 @@ class PointerInteraction { // #private  $data  _user
         clone: () => this.lift.to.transfer(this.target.cloneNode(true)),
         swap: () => {
             if (!this.goal) return;
+            PointerInteraction.swapping = true;
             this.#revert = false;
             this.target.classList.add('PI-animate');
             this.goal.classList.add('PI-animate');
@@ -112,7 +113,7 @@ class PointerInteraction { // #private  $data  _user
         }
     }}
     #reset () {
-        this.#hold.timer?.forEach(timer => clearTimeout(timer));
+        this.#hold.timer?.forEach(clearTimeout);
         let [target, goal] = [this.target, this.goal];
         this.target = this.goal = null;
         this.#events.remove();
@@ -140,8 +141,9 @@ class PointerInteraction { // #private  $data  _user
         place.replaceWith(goal);
         target.style.transform = this.$press.userTransform;
         goal.style.transform = this.$lift.userTransform; 
+        PointerInteraction.swapping = false;
     }
-    #css = `
+    static #css = `
         .PI-target {
             z-index:99; position:relative;
             &,* {pointer-events:none;}
@@ -167,7 +169,7 @@ class PointerInteraction { // #private  $data  _user
         }
     `;
     static to = {
-        elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el)
+        elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el).filter(el => el)
     }
     static getBoundingPageRect = el => (({x, y}) => ({
         x: x + scrollX,
@@ -176,6 +178,18 @@ class PointerInteraction { // #private  $data  _user
     static containsPointer = (el, moveX, moveY) => el && (({x, y, width, height}) => 
         moveX > x && moveY > y && moveX < x+width && moveY < y+height
     )(el.getBoundingClientRect())
+
+    static events = settings => {
+        settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
+        Q('head').append(E('style', {id: 'pointer-interaction'}, PointerInteraction.#css));
+        addEventListener('pointerdown', ev => {
+            let target, actions = settings.find(([targets]) => typeof targets == 'string' ? 
+                ev.target.matches(targets) : [targets].flat().includes(ev.target)
+            );
+            actions ??= settings.find(([targets]) => typeof targets == 'string' && (target = ev.target.closest(targets)));
+            actions && actions[1].execute(ev, target);
+        });
+    }
 }
 class HoldClick {
     constructor(PI) {this.PI = PI;}
@@ -188,10 +202,14 @@ class Hold extends HoldClick {
     schedule = () => this.actions.map(([s, action]) => setTimeout(() => action(this.PI, this.PI.target), s*1000));
 }
 class Click extends HoldClick {
-    constructor(PI) {
-        super(PI);
-        this.target = PI.target;
+    #timer = new O();
+    constructor(PI) {super(PI);}
+    abort = () => this.actions.at(-1).push(true) && this;
+    fire = () => {
+        let target = this.PI.target;
+        this.#timer.each(([times, timer]) => times < target.clicked && clearTimeout(timer));
+        let [, action, abort] = this.actions.find(([times]) => target.clicked == times) ?? [];
+        action && this.#timer.set(target.clicked, setTimeout(() => action(this.PI, target), abort ? 500 : 0));
     }
-    fire = clicked => this.actions.find(([times]) => clicked == times)?.[1](this.PI, this.target);
 }
 export {PointerInteraction}
