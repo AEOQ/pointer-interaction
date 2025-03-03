@@ -46,7 +46,8 @@ class PointerInteraction { // #private  $data  _user
             x: ev.x, y: ev.y, dx: ev.x-this.$press.x, dy: ev.y-this.$press.y,
         };
         if (Math.hypot(this.$drag.dx, this.$drag.dy) < 5) return;
-
+        this.target.classList.add('PI-dragged');
+        
         this.#hold.timer?.forEach(clearTimeout);
         this._scroll && this.drag.to.scroll(this._scroll === true ? undefined : this._scroll);
         if (this._drop) {
@@ -87,7 +88,7 @@ class PointerInteraction { // #private  $data  _user
             this.$lift = {initial: new DOMMatrix(getComputedStyle(this.goal).transform)};
             this.goal.style.touchAction = 'none';
         }
-        this._click && (this.#click ??= this._click(new Click(this))) && this.lift.to.click();
+        this._click && !this.target.matches('.PI-dragged') && this.lift.to.click();
 
         typeof this._lift == 'function' && this._lift(this, this.target, this.goal);
         this.#revert && !PointerInteraction.swapping && this.lift.to.revert();
@@ -95,6 +96,7 @@ class PointerInteraction { // #private  $data  _user
     }
     lift = {to: {
         click: () => {
+            this.#click ??= this._click(new Click(this));
             this.target.clicked = new Date() - this.target.lastClicked <= 500 ? this.target.clicked + 1 : 1;
             this.target.lastClicked = new Date();
             this.#click.fire(this.target.clicked);
@@ -102,7 +104,7 @@ class PointerInteraction { // #private  $data  _user
         transfer: cloned => {
             if (!this.goal || this.goal == this.target.parentElement) return;
             let appended = this.goal.appendChild(cloned ?? this.target);
-            appended.classList.remove('PI-target', 'PI-reached');
+            appended.classList.remove('PI-target', 'PI-dragged', 'PI-reached');
             appended.style.transform = this.$press.initial;
         },
         clone: () => this.lift.to.transfer(this.target.cloneNode(true)),
@@ -126,7 +128,7 @@ class PointerInteraction { // #private  $data  _user
         let [target, goal] = [this.target, this.goal];
         this.target = this.goal = null;
         this.#events.remove();
-        target?.classList.remove('PI-target', 'PI-reached');
+        target?.classList.remove('PI-target', 'PI-dragged', 'PI-reached');
         goal?.classList.remove('PI-goal');
         Q('.PI-animate') && setTimeout(() => {
             this.#callback?.(target, goal);
