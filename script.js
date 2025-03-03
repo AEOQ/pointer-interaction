@@ -177,8 +177,7 @@ class PointerInteraction { // #private  $data  _user
         elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el).filter(el => el)
     }
     static getBoundingPageRect = el => (({x, y}) => ({
-        x: x + scrollX,
-        y: y + scrollY,
+        x: x + scrollX, y: y + scrollY,
     }))(el.getBoundingClientRect())
     static containsPointer = (el, px, py) => el && (({x, y, width, height}) => 
         px > x && py > y && px < x+width && py < y+height
@@ -202,20 +201,21 @@ class HoldClick {
     actions = [];
     for = param => this.actions.push([param]) && this;
     to = action => this.actions.at(-1).push(action) && this;
+    chain = func => func && func(this);
 }
 class Hold extends HoldClick {
     constructor(PI) {super(PI);}
     schedule = () => this.actions.map(([s, action]) => setTimeout(() => action(this.PI, this.PI.target), s*1000));
 }
 class Click extends HoldClick {
-    #timer = new O();
+    #timers = [];
     constructor(PI) {super(PI);}
     abort = () => this.actions.at(-1).push(true) && this;
     fire = () => {
         let target = this.PI.target;
-        this.#timer.each(([times, timer]) => times < target.clicked && clearTimeout(timer));
-        let [, action, abort] = this.actions.find(([times]) => target.clicked == times) ?? [];
-        action && this.#timer.set(target.clicked, setTimeout(() => action(this.PI, target), abort ? 500 : 0));
+        this.#timers.forEach(([times, timer]) => times < target.clicked && clearTimeout(timer));
+        this.actions.forEach(([times, action, abort]) => target.clicked == times && 
+            this.#timers.push([target.clicked, setTimeout(() => action(this.PI, target), abort ? 500 : 0)]));
     }
 }
 export {PointerInteraction}

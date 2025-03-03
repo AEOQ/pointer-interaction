@@ -90,7 +90,8 @@
         '.yellow': {
             click: click => click
                 .for(2).to((_, target) => target.style.transform = null).abort()
-                .for(3).to((_, target) => target.style.borderRadius = '9em'),
+                .for(3).to((_, target) => target.style.borderRadius = '9em')
+                .for(2).to((_, target) => target.style.color = 'blue'),
         },
         '.red': {
             hold: hold => hold
