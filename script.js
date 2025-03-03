@@ -27,7 +27,7 @@ class PointerInteraction { // #private  $data  _user
             x: ev.x, y: ev.y,
             sx: this.target.scrollLeft, sy: this.target.scrollTop, scrollY,
             initial: new DOMMatrix(getComputedStyle(this.target).transform),
-            target: PointerInteraction.getBoundingPageRect(this.target)
+            target: E(this.target).getBoundingPageRect()
         };
 
         this._hold && (this.#hold.timer = this._hold(new Hold(this)).schedule());
@@ -67,6 +67,10 @@ class PointerInteraction { // #private  $data  _user
                 [m, typeof axis[a]?.[m] == 'function' ? axis[a][m](this, this.target, this.goal) : axis[a]?.[m] ?? v]);
             return Math.max(limit.min, Math.min(axis[a] === false ? 0 : this.$drag[`d${a}`], limit.max));
         })),
+        select: (bullseye, children = PI.target.children) => {
+            this.target.Q('.PI-selected')?.classList.remove('PI-selected');
+            [...children].find(child => E(child).contains(bullseye))?.classList.add('PI-selected');
+        },
         scrollPage: () => {
             let [proportion, bottomed] = [this.$drag.y / innerHeight, scrollY + innerHeight >= document.body.offsetHeight + 100];
             proportion < .05 ? scrollBy(0, -4) : 
@@ -74,7 +78,7 @@ class PointerInteraction { // #private  $data  _user
         },
         findGoal: () => {
             let goal = PointerInteraction.to.elements(this._drop.goal) //live, includes cloned
-                .find(el => el != this.target && PointerInteraction.containsPointer(el, this.$drag.x, this.$drag.y));
+                .find(el => el != this.target && E(el).contains({x: this.$drag.x, y: this.$drag.y}));
             goal?.Q('.PI-goal') && (goal = null);
             this.target.classList.toggle('PI-reached', goal ? true : false);
             if (goal == this.goal) return; 
@@ -104,7 +108,7 @@ class PointerInteraction { // #private  $data  _user
         transfer: cloned => {
             if (!this.goal || this.goal == this.target.parentElement) return;
             let appended = this.goal.appendChild(cloned ?? this.target);
-            appended.classList.remove('PI-target', 'PI-dragged', 'PI-reached');
+            appended.classList.remove(...PointerInteraction.classes);
             appended.style.transform = this.$press.initial;
         },
         clone: () => this.lift.to.transfer(this.target.cloneNode(true)),
@@ -113,7 +117,7 @@ class PointerInteraction { // #private  $data  _user
             PointerInteraction.swapping = true;
             this.target.classList.add('PI-animate');
             this.goal.classList.add('PI-animate');
-            let {x, y} = PointerInteraction.getBoundingPageRect(this.goal);
+            let {x, y} = E(this.goal).getBoundingPageRect();
             this.#translate(x - this.$press.target.x, y - this.$press.target.y);
             this.#translate(this.$press.target.x - x, this.$press.target.y - y, this.goal);
             this.#callback = this.#commitSwap;
@@ -128,7 +132,7 @@ class PointerInteraction { // #private  $data  _user
         let [target, goal] = [this.target, this.goal];
         this.target = this.goal = null;
         this.#events.remove();
-        target?.classList.remove('PI-target', 'PI-dragged', 'PI-reached');
+        target?.classList.remove(...PointerInteraction.classes);
         goal?.classList.remove('PI-goal');
         Q('.PI-animate') && setTimeout(() => {
             this.#callback?.(target, goal);
@@ -181,13 +185,6 @@ class PointerInteraction { // #private  $data  _user
     static to = {
         elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el).filter(el => el)
     }
-    static getBoundingPageRect = el => (({x, y}) => ({
-        x: x + scrollX, y: y + scrollY,
-    }))(el.getBoundingClientRect())
-    static containsPointer = (el, px, py) => el && (({x, y, width, height}) => 
-        px > x && py > y && px < x+width && py < y+height
-    )(el.getBoundingClientRect())
-
     static events = settings => {
         settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
         addEventListener('pointerdown', ev => {
@@ -199,6 +196,7 @@ class PointerInteraction { // #private  $data  _user
             actions[1].execute(ev, target);
         });
     }
+    static classes = ['PI-target', 'PI-dragged', 'PI-reached']
 }
 class HoldClick {
     constructor(PI) {this.PI = PI;}
