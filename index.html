@@ -17,8 +17,9 @@
     }
     .zone {
         background:silver;
-        height:5em;
-        padding:1em 0;
+        min-height:5em;
+        padding:1em 0; margin:5em 0;
+        flex-wrap:wrap;
     }
     li {
         all:unset;
@@ -75,6 +76,7 @@
         },
         '.blue': {
             drop: { goal: '.zone' },
+            drag: { x: false, y: { min: PI => PI.$drag.ty - PI.target.getBoundingClientRect().top - scrollY } },
             lift: PI => PI.lift.to.clone()
         },
         '.magenta,.zone li': {
