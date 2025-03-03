@@ -161,7 +161,6 @@ class PointerInteraction { // #private  $data  _user
     static #css = place => place.Q('#PI') || place.append(E('style', {id: 'PI'}, `
         .PI-target {
             z-index:99; position:relative;
-            pointer-events:none;
         }
         :has(.PI-target) {
             user-select:none;
