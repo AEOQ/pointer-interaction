@@ -202,7 +202,7 @@ class HoldClick {
     actions = [];
     for = param => this.actions.push([param]) && this;
     to = action => this.actions.at(-1).push(action) && this;
-    chain = func => func && func(this);
+    chain = func => (func && func(this), this);
 }
 class Hold extends HoldClick {
     constructor(PI) {super(PI);}
