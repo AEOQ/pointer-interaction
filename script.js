@@ -219,4 +219,4 @@ class Click extends HoldClick {
             this.#timers.push([target.clicked, setTimeout(() => action(this.PI, target), abort ? 500 : 0)]));
     }
 }
-export {PointerInteraction}
+export default PointerInteraction

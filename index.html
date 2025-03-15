@@ -83,7 +83,7 @@ for (let i = 0; i <= 50; i++) Q('#stock').append(
         classList: ['red','lime','blue','aqua','magenta','yellow'][Math.floor(Math.random()*6)],
         style: {transform: 'rotate(45deg)'}}
     ));
-import {PointerInteraction} from './script.js';
+import PointerInteraction from './script.js';
 PointerInteraction.events(new O([
     [Q('ul'), { scroll: { x: true } }],
     [Q('nav'), {
