@@ -1,19 +1,23 @@
 import {A,E,O,Q} from '../AEOQ.mjs';
 
 class PointerInteraction { // #private  $data  _user
-    #click; #hold = {}; #revert; #callback;
+    #click; #hold = {}; #revert; #callback; #roots = new Set();
     constructor (targets, actions) {
         Object.assign(this, new O(actions).map(([k, v]) => [`_${k}`, v]));
         PointerInteraction.to.elements(targets).forEach(el => {
+            this.#roots.add(el.getRootNode());
             if (!this._scroll) return el.parentElement.style.touchAction = 'none';
             el.classList.add('PI-scroll');
             el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
         });
+        Object.defineProperty(this.#events, 'roots', {value: this.#roots});
         this.#revert = this._drag?.revert;
     }
     #events = new Proxy(
-        Object.defineProperty({}, 'remove', {value() {[...new O(this)].forEach(p => removeEventListener(...p))}, enumerable: false}),
-        {set: (target, ...p) => addEventListener(...p) ?? Reflect.set(target, ...p)} //window
+        Object.defineProperty({}, 'remove', {
+            value() {[...new O(this)].forEach(p => this.roots.forEach(root => root.removeEventListener(...p)))}, 
+        }),
+        {set: (target, ...p) => this.#roots.forEach(el => el.addEventListener(...p)) || [Reflect.set(target, ...p)]}
     )
     execute (ev, target) {
         this.target = target ?? ev.target;
@@ -186,14 +190,20 @@ class PointerInteraction { // #private  $data  _user
     }
     static events = settings => {
         settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
-        addEventListener('pointerdown', ev => {
-            let target, actions = settings.find(([targets]) => typeof targets == 'string' ? 
-                ev.target.matches(targets) : [targets].flat().includes(ev.target));
-            actions ??= settings.find(([targets]) => typeof targets == 'string' && (target = ev.target.closest(targets)));
-            if (!actions) return;
-            PointerInteraction.#css(ev.target.getRootNode() instanceof ShadowRoot ? ev.target.getRootNode() : document.head);
-            actions[1].execute(ev, target);
-        });
+        settings.values().forEach(PI => 
+            PI.#roots.forEach(root => root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev, settings)))
+        );
+    }
+    static #pointerdown = (ev, settings) => {
+        let target;
+        let pair = settings.find(([targets]) => 
+            typeof targets == 'string' ? ev.target.matches(targets) : [targets].flat().includes(ev.target)
+        ) ?? settings.find(([targets]) => 
+            typeof targets == 'string' && (target = ev.target.closest(targets))
+        );
+        if (!pair) return;
+        PointerInteraction.#css(ev.target.getRootNode() instanceof ShadowRoot ? ev.target.getRootNode() : document.head);
+        pair[1].execute(ev, target);
     }
     static classes = ['PI-target', 'PI-dragged', 'PI-reached']
 }
