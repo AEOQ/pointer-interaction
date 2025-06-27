@@ -199,8 +199,8 @@ class PointerInteraction { // #private  $data  _user
         let target;
         let pair = settings.find(([targets]) => 
             typeof targets == 'string' ? ev.target.matches(targets) : [targets].flat().includes(ev.target)
-        ) ?? settings.find(([targets]) => 
-            typeof targets == 'string' && (target = ev.target.closest(targets))
+        ) ?? settings.find(([targets]) => target = 
+            typeof targets == 'string' ? ev.target.closest(targets) : [targets].flat().includes(ev.target.assignedSlot)
         );
         if (!pair) return;
         PointerInteraction.#css(ev.target.getRootNode() instanceof ShadowRoot ? ev.target.getRootNode() : document.head);
