@@ -15,9 +15,9 @@ class PointerInteraction { // #private  $data  _user
     }
     #events = new Proxy(
         Object.defineProperty({}, 'remove', {
-            value() {[...new O(this)].forEach(p => this.roots.forEach(root => root.removeEventListener(...p)))}, 
+            value() {[...new O(this)].forEach(p => removeEventListener(...p))}, 
         }),
-        {set: (target, ...p) => this.#roots.forEach(el => el.addEventListener(...p)) || [Reflect.set(target, ...p)]}
+        {set: (target, ...p) => addEventListener(...p) || [Reflect.set(target, ...p)]}
     )
     execute (ev, target) {
         this.target = target ?? ev.target;
