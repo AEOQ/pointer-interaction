@@ -162,7 +162,7 @@ class PointerInteraction { // #private  $data  _user
         goal.style.transform = this.$lift.initial; 
         PointerInteraction.swapping = false;
     }
-    static #roots;
+    static #roots = new Set();
     static #css = place => place.Q('#PI') || place.append(E('style', {id: 'PI'}, `
         .PI-target {
             z-index:99; position:relative;
