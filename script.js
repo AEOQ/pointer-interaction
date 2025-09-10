@@ -1,16 +1,15 @@
 import {A,E,O,Q} from '../AEOQ.mjs';
 
 class PointerInteraction { // #private  $data  _user
-    #click; #hold = {}; #revert; #callback; #roots = new Set();
+    #click; #hold = {}; #revert; #callback;
     constructor (targets, actions) {
         Object.assign(this, new O(actions).map(([k, v]) => [`_${k}`, v]));
         PointerInteraction.to.elements(targets).forEach(el => {
-            this.#roots.add(el.getRootNode());
+            PointerInteraction.#roots.add(el.getRootNode());
             if (!this._scroll) return el.parentElement.style.touchAction = 'none';
             el.classList.add('PI-scroll');
             el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
         });
-        Object.defineProperty(this.#events, 'roots', {value: this.#roots});
         this.#revert = this._drag?.revert;
     }
     #events = new Proxy(
@@ -163,6 +162,7 @@ class PointerInteraction { // #private  $data  _user
         goal.style.transform = this.$lift.initial; 
         PointerInteraction.swapping = false;
     }
+    static #roots;
     static #css = place => place.Q('#PI') || place.append(E('style', {id: 'PI'}, `
         .PI-target {
             z-index:99; position:relative;
@@ -191,9 +191,7 @@ class PointerInteraction { // #private  $data  _user
     }
     static events = settings => {
         settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
-        settings.values().forEach(PI => 
-            PI.#roots.forEach(root => root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev, settings)))
-        );
+        PointerInteraction.#roots.forEach(root => root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev, settings)));
     }
     static #pointerdown = (ev, settings) => {
         let target;
