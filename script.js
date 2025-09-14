@@ -8,6 +8,10 @@ class PointerInteraction { // #private  $data  _user
             PointerInteraction.#roots.add(el.getRootNode());
             if (!this._scroll) return el.parentElement.style.touchAction = 'none';
             el.classList.add('PI-scroll');
+            el.addEventListener('wheel', ev => (ev.deltaY < 0 && el.scrollLeft != 0 
+                || ev.deltaY > 0 && el.scrollLeft != el.scrollWidth - el.clientWidth
+                ) && (el.scrollLeft += ev.deltaY > 0 ? 100 : -100) && ev.preventDefault()
+            );
             el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
         });
         this.#revert = this._drag?.revert;
