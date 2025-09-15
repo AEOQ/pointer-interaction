@@ -187,7 +187,6 @@ class PointerInteraction { // #private  $data  _user
         .PI-animate {
             z-index:98; position:relative;
             transition:transform .5s;
-            :has(&) {pointer-events:none;}
         }
     `));
     static to = {
