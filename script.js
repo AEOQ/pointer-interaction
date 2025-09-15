@@ -131,7 +131,7 @@ class PointerInteraction { // #private  $data  _user
             this.#callback = this.#commitSwap;
         },
         revert: () => {
-            this.target.classList.add('PI-animate');
+            (this.$drag.dx > 1 || this.$drag.dy > 1) && this.target.classList.add('PI-animate');
             this.target.style.transform = this.$press.initial;
         }
     }}
@@ -140,6 +140,7 @@ class PointerInteraction { // #private  $data  _user
         let [target, goal] = [this.target, this.goal];
         this.target = this.goal = null;
         this.#events.remove();
+        this.$drag = {};
         target?.classList.remove(...PointerInteraction.classes);
         goal?.classList.remove('PI-goal');
         Q('.PI-animate') && setTimeout(() => {
@@ -187,6 +188,7 @@ class PointerInteraction { // #private  $data  _user
         .PI-animate {
             z-index:98; position:relative;
             transition:transform .5s;
+            :has(&) {pointer-events:none;}
         }
     `));
     static to = {
