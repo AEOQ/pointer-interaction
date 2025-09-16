@@ -45,7 +45,7 @@ class PointerInteraction { // #private  $data  _user
         this.#events.pointerup = this.#events.pointercancel = () => this.#lift();
     }
     #drag (ev) {
-        this._scroll && (ev.pointerType != 'mouse') ? null : ev.preventDefault();
+        this._scroll && ev.pointerType != 'mouse' ? null : ev.preventDefault();
         if (this.target.Q('.PI-target')) return this.#reset();
         
         this.$drag = {
@@ -178,7 +178,6 @@ class PointerInteraction { // #private  $data  _user
         .PI-scroll {
             overflow:scroll;
             scrollbar-width:none;
-            touch-action:none;
             
             &:has(.PI-target,.PI-animate) {
                 overflow:visible;
