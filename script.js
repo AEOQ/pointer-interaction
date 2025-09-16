@@ -45,8 +45,11 @@ class PointerInteraction { // #private  $data  _user
         this.#events.pointerup = this.#events.pointercancel = () => this.#lift();
     }
     #drag (ev) {
+        if (this._scroll) 
+            return ev.pointerType == 'mouse' && this.drag.to.scroll(this._scroll === true ? undefined : this._scroll);
+        if (this.target.Q('.PI-target')) 
+            return this.#reset();
         ev.preventDefault();
-        if (this.target.Q('.PI-target')) return this.#reset();
         
         this.$drag = {
             ...this.$drag ?? {tx: 0, ty: 0},
@@ -56,7 +59,6 @@ class PointerInteraction { // #private  $data  _user
         this.target.classList.add('PI-dragged');
         
         this.#hold.timer?.forEach(clearTimeout);
-        this._scroll && ev.pointerType == 'mouse' && this.drag.to.scroll(this._scroll === true ? undefined : this._scroll);
         if (this._drop) {
             this.drag.to.translate({x: this._drag?.x, y: this._drag?.y});
             this.drag.to.scrollPage();
