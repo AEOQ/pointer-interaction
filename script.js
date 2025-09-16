@@ -27,7 +27,8 @@ class PointerInteraction { // #private  $data  _user
         this.#press(ev);
     }
     #press (ev) {
-        if (!this.target || this.target.Q('.PI-target')) return this.#reset();
+        if (!this.target || this.target.Q('.PI-target') 
+            || this._scroll && ev.pointerType != 'mouse') return this.#reset();
         this.target.classList.add('PI-target');
 
         this.$press = {
