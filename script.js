@@ -45,6 +45,7 @@ class PointerInteraction { // #private  $data  _user
         this.#events.pointerup = this.#events.pointercancel = () => this.#lift();
     }
     #drag (ev) {
+        if (this._scroll && ev.pointerType != 'mouse') return;
         this._scroll && ev.pointerType != 'mouse' ? null : ev.preventDefault();
         if (this.target.Q('.PI-target')) return this.#reset();
         
