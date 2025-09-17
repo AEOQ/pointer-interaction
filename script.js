@@ -96,7 +96,7 @@ class PointerInteraction { // #private  $data  _user
         }
     }}
     #lift (ev) {
-        this._scroll && ev.pointerType == 'mouse' && Math.hypot(this.$drag.dx, this.$drag.dy) >= 5 && ev.preventDefault();
+        this._scroll && ev.pointerType == 'mouse' && Math.hypot(this.$drag.dx, this.$drag.dy) >= 5 && ev.stopPropagation();
         if (!this.target) return this.#reset();
         if (this.goal) {
             this.$lift = {initial: new DOMMatrix(getComputedStyle(this.goal).transform)};
