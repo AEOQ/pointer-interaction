@@ -43,7 +43,7 @@ class PointerInteraction { // #private  $data  _user
         typeof this._press == 'function' && this._press(this, this.target);
 
         this.#events.pointermove = ev => this.#drag(ev);
-        this.#events.pointerup = this.#events.pointercancel = () => this.#lift();
+        this.#events.pointerup = this.#events.pointercancel = ev => this.#lift(ev);
     }
     #drag (ev) {
         ev.preventDefault();
