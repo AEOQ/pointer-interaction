@@ -170,7 +170,7 @@ class PointerInteraction { // #private  $data  _user
         PointerInteraction.swapping = false;
     }
     static #roots = new Set();
-    static #css = place => place.Q('#PI') || place.append(E('style', {id: 'PI'}, `
+    static #css = place => place.Q('#PI') || place.append(E('style#PI', `
         .PI-target {
             z-index:99; position:relative;
         }
