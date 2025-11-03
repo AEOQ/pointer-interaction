@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<title>Pointer Interaction</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<nav>
+    <a>1</a>
+    <a>2</a>
+    <a>3</a>
+    <a>4</a>
+    <a>5</a>
+</nav>
+<style>
+    nav {
+        display:inline-flex; gap:.5em;
+        transform:translateX(calc(-100% + 3em));
+
+        &::after {content:'Pull';}
+        &::after,a {
+            width:3em; height:3em;
+            background:lightcoral;
+        } 
+    }
+    summary+code {
+        margin-bottom:1em;
+        display:block;
+    }
+    ul {
+        all:unset;
+        display:flex;
+    }
+    #stock {
+        padding:2em 0;
+    }
+    .zone {
+        background:silver;
+        min-height:5em;
+        padding:1em 0; margin:5em 0;
+        flex-wrap:wrap;
+    }
+    li {
+        all:unset;
+        min-width:3rem; max-width:3rem; height:3rem;
+        border:.2rem solid;
+        margin:0 .5rem;
+        span {
+            display:inline-block; font-size:2em;
+        }
+    }
+    .red {border-color:red;}
+    .lime {border-color:lime;}
+    .blue {border-color:blue;}
+    .aqua {border-color:aqua;}
+    .magenta {border-color:magenta;}
+    .yellow {border-color:yellow;}
+    .PI-target {background:lightgoldenrodyellow;}
+    .PI-reached {outline:.2em solid chartreuse;}
+    .red.PI-target {background:hsl(var(--hue,0),100%,50%);}
+    .red.held {background:green;}
+    .PI-goal {background:chartreuse;}
+</style>
+
+<details>
+    <summary>Show code</summary>
+    <code>
+    </code>
+</details>
+<p>
+<h2>Stock</h2>
+<ul id="stock"></ul>
+<h2>Zone 1</h2>
+<ul class="zone"></ul>
+<h2>Zone 2</h2>
+<ul class="zone"></ul>
+<h2>Zone 3</h2>
+<ul class="zone"></ul>
+
+<script type="module">
+import {A,E,O,Q} from '../AEOQ.mjs';
+for (let i = 0; i <= 50; i++) Q('#stock').append(
+    E('li', [
+        E('span', `${i}`, {style: {transform: 'rotate(-45deg)'}})
+    ], {
+        classList: ['red','lime','blue','aqua','magenta','yellow'][Math.floor(Math.random()*6)],
+        style: {transform: 'rotate(45deg)'}}
+    ));
+import PointerInteraction from './script.js';
+PointerInteraction.events(new O([
+    [Q('ul'), { scroll: { x: true } }],
+    [Q('nav'), {
+        drag: PI => {
+            PI.drag.to.translate({ x: {min: -10, max: Q('nav').clientWidth - 48}, y: false });
+            PI.drag.to.select({x: 0}, [...PI.target.children].filter(child => !child.matches(':has(.current)')));
+        },
+        lift: () => console.log(Q('.PI-selected')?.innerText)
+    }]
+], {
+    '.lime': {
+        drag: PI => PI.drag.to.translate(),
+        lift: PI => PI.lift.to.revert()
+    },
+    '.blue': {
+        drop: { goal: '.zone' },
+        drag: { x: false, y: { min: PI => PI.$drag.ty - PI.target.getBoundingClientRect().top - scrollY } },
+        lift: PI => PI.lift.to.clone()
+    },
+    '.magenta,.zone li': {
+        drop: { goal: 'li' },
+        lift: PI => PI.lift.to.swap()
+    },
+    '.aqua': {
+        drop: { goal: '.zone' },
+        lift: PI => PI.lift.to.transfer()
+    },
+    '.yellow': {
+        click: click => click
+            .for(2).to((_, target) => target.style.transform = null).abort()
+            .for(3).to((_, target) => target.style.borderRadius = '9em')
+            .for(2).to((_, target) => target.style.color = 'blue'),
+    },
+    '.red': {
+        hold: hold => hold
+            .for(0.5).to(PI => PI.target.classList.add('held'))
+            .for(1.5).to(PI => PI.target.style.background = 'black'),
+        drop: { goal: '.zone' },
+        drag: PI => PI.target.style.setProperty('--hue', PI.$drag.x - PI.$press.x),
+        lift: PI => PI.target.matches('.held') && PI.lift.to.clone()
+    },
+}));
+Q('details code').innerHTML = Q('script[type=module]').textContent.replaceAll(/(?<=\n)\s+/g, spaces => new Array(spaces.length/2).fill('&nbsp;').join('')).replaceAll(/\n/g, '<br>')
+</script>
