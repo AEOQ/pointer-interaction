@@ -6,7 +6,7 @@ class PointerInteraction { // #private  $data  _user
         Object.assign(this, new O(actions).map(([k, v]) => [`_${k}`, v]));
         PointerInteraction.to.elements(targets).forEach(el => {
             PointerInteraction.#roots.add(el.getRootNode());
-            if (!this._scroll) return el.parentElement.style.touchAction = 'none';
+            if (!this._scroll) return;
             el.classList.add('PI-scroll');
             el.addEventListener('wheel', ev => (ev.deltaY < 0 && el.scrollLeft != 0 
                 || ev.deltaY > 0 && el.scrollLeft != el.scrollWidth - el.clientWidth
@@ -98,7 +98,7 @@ class PointerInteraction { // #private  $data  _user
         if (!this.target) return this.#reset();
         if (this.goal) {
             this.$lift = {initial: new DOMMatrix(getComputedStyle(this.goal).transform)};
-            this.goal.style.touchAction = 'none';
+            //this.goal.style.touchAction = 'none';
         }
         this._click && !this.target.matches('.PI-dragged') && this.lift.to.click();
 
@@ -178,7 +178,7 @@ class PointerInteraction { // #private  $data  _user
             scrollbar-width:none;
             
             &:has(.PI-target,.PI-animate) {
-                overflow:visible;
+                overflow:visible; max-width: 100vw;
                 transform:translate(calc(var(--scrolledX,0)*-1px),calc(var(--scrolledY,0)*-1px));
             }
         }
