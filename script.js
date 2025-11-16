@@ -6,6 +6,7 @@ class PointerInteraction { // #private  $data  _user
         Object.assign(this, new O(actions).map(([k, v]) => [`_${k}`, v]));
         PointerInteraction.to.elements(targets).forEach(el => {
             PointerInteraction.#roots.add(el.getRootNode());
+            (this._drag || this._drop) && el.classList.add('PI-draggable');
             if (!this._scroll) return;
             el.classList.add('PI-scroll');
             el.addEventListener('wheel', ev => (ev.deltaY < 0 && el.scrollLeft != 0 
@@ -96,10 +97,7 @@ class PointerInteraction { // #private  $data  _user
     #lift (ev) {
         this._scroll && ev.pointerType == 'mouse' && Math.hypot(this.$drag?.dx, this.$drag?.dy) >= 5 && ev.stopPropagation();
         if (!this.target) return this.#reset();
-        if (this.goal) {
-            this.$lift = {initial: new DOMMatrix(getComputedStyle(this.goal).transform)};
-            //this.goal.style.touchAction = 'none';
-        }
+        this.goal && (this.$lift = {initial: new DOMMatrix(getComputedStyle(this.goal).transform)});
         this._click && !this.target.matches('.PI-dragged') && this.lift.to.click();
 
         typeof this._lift == 'function' && this._lift(this, this.target, this.goal);
@@ -169,10 +167,11 @@ class PointerInteraction { // #private  $data  _user
     }
     static #roots = new Set();
     static #css = place => place.Q('#PI') || place.append(E('style#PI', `
+        .PI-draggable {touch-action: none; user-select: none;}
+        .PI-dragged {pointer-events:none;}
         .PI-target {
             z-index:99; position:relative;
         }
-        :has(.PI-target) {user-select:none;}
         .PI-scroll {
             overflow:scroll;
             scrollbar-width:none;
@@ -182,7 +181,6 @@ class PointerInteraction { // #private  $data  _user
                 transform:translate(calc(var(--scrolledX,0)*-1px),calc(var(--scrolledY,0)*-1px));
             }
         }
-        .PI-dragged {pointer-events:none;}
         .PI-animate {
             z-index:98; position:relative;
             transition:transform .5s;
