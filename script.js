@@ -20,7 +20,7 @@ class PointerInteraction { // #private  $data  _user
         Object.defineProperty({}, 'remove', {
             value() {[...new O(this)].forEach(p => removeEventListener(...p))}, 
         }),
-        {set: (target, ...p) => addEventListener(...p) || [Reflect.set(target, ...p)]}
+        {set: (target, ...p) => addEventListener(...p) || Reflect.set(target, ...p)}
     )
     execute (ev, target) {
         this.target = target ?? ev.target;
@@ -32,14 +32,13 @@ class PointerInteraction { // #private  $data  _user
         this.target.classList.add('PI-target');
 
         this.$press = {
-            x: ev.x, y: ev.y,
+            x: ev.pageX, y: ev.pageY,
             sx: this.target.scrollLeft, sy: this.target.scrollTop, scrollY,
             initial: new DOMMatrix(getComputedStyle(this.target).transform),
             target: E(this.target).getBoundingPageRect()
         };
 
         this._hold && (this.#hold.timer = this._hold(new Hold(this)).schedule());
-
         typeof this._press == 'function' && this._press(this, this.target);
 
         this.#events.pointermove = ev => this.#drag(ev);
@@ -51,11 +50,11 @@ class PointerInteraction { // #private  $data  _user
         
         this.$drag = {
             ...this.$drag ?? {tx: 0, ty: 0},
-            x: ev.x, y: ev.y, dx: ev.x-this.$press.x, dy: ev.y-this.$press.y,
+            x: ev.pageX, y: ev.pageY, dx: ev.pageX-this.$press.x, dy: ev.pageY-this.$press.y,
         };
         if (Math.hypot(this.$drag.dx, this.$drag.dy) < 5) return;
         this.target.classList.add('PI-dragged');
-        
+
         this.#hold.timer?.forEach(clearTimeout);
         this._scroll && this.drag.to.scroll(this._scroll === true ? undefined : this._scroll);
         if (this._drop) {
@@ -85,14 +84,12 @@ class PointerInteraction { // #private  $data  _user
             proportion > .95 && !bottomed ? scrollBy(0, 4) : null;
         },
         findGoal: () => {
-            let goal = PointerInteraction.to.elements(this._drop.goal) //live, includes cloned
-                .find(el => el != this.target && E(el).contains({x: this.$drag.x, y: this.$drag.y}));
-            goal?.Q('.PI-goal') && (goal = null);
+            let goal = document.elementFromPoint(this.$drag.x, this.$drag.y);
+            (goal != this._drop.goal && !goal.matches(this._drop.goal) || goal?.Q('.PI-goal')) && (goal = null);
             this.target.classList.toggle('PI-reached', goal ? true : false);
             if (goal == this.goal) return; 
             this.goal?.classList.remove('PI-goal');
-            this.goal = goal;
-            goal?.classList.add('PI-goal');
+            (this.goal = goal)?.classList.add('PI-goal');
         }
     }}
     #lift (ev) {
@@ -133,7 +130,7 @@ class PointerInteraction { // #private  $data  _user
             this.#callback = this.#commitSwap;
         },
         revert: () => {
-            (this.$drag.dx > 1 || this.$drag.dy > 1) && this.target.classList.add('PI-animate');
+            (this.$drag?.dx > 1 || this.$drag?.dy > 1) && this.target.classList.add('PI-animate');
             this.target.style.transform = this.$press.initial;
         }
     }}
@@ -142,7 +139,7 @@ class PointerInteraction { // #private  $data  _user
         let [target, goal] = [this.target, this.goal];
         this.target = this.goal = null;
         this.#events.remove();
-        this.$drag = {};
+        this.$drag = null;
         target?.classList.remove(...PointerInteraction.classes);
         goal?.classList.remove('PI-goal');
         Q('.PI-animate') && setTimeout(() => {
@@ -174,9 +171,7 @@ class PointerInteraction { // #private  $data  _user
         .PI-target {
             z-index:99; position:relative;
         }
-        :has(.PI-target) {
-            user-select:none;
-        }
+        :has(.PI-target) {user-select:none;}
         .PI-scroll {
             overflow:scroll;
             scrollbar-width:none;
@@ -186,6 +181,7 @@ class PointerInteraction { // #private  $data  _user
                 transform:translate(calc(var(--scrolledX,0)*-1px),calc(var(--scrolledY,0)*-1px));
             }
         }
+        .PI-dragged {pointer-events:none;}
         .PI-animate {
             z-index:98; position:relative;
             transition:transform .5s;
