@@ -1,4 +1,4 @@
-import {A,E,O,Q} from '../AEOQ.mjs';
+import {A,E,O,Q} from 'https://aeoq.github.io/AEOQ.mjs';
 
 class PointerInteraction { // #private  $data  _user
     #click; #hold = {}; #revert; #callback;
@@ -79,17 +79,18 @@ class PointerInteraction { // #private  $data  _user
             [...children].find(child => E(child).contains(bullseye))?.classList.add('PI-selected');
         },
         scrollPage: () => {
-            let [proportion, bottomed] = [this.$drag.y / innerHeight, scrollY + innerHeight >= document.body.offsetHeight + 100];
+            let proportion = (this.$drag.y - scrollY) / innerHeight;
+            let bottomed = scrollY + innerHeight >= document.body.offsetHeight + 100;
             proportion < .05 ? scrollBy(0, -4) : 
             proportion > .95 && !bottomed ? scrollBy(0, 4) : null;
         },
         findGoal: () => {
-            let goal = document.elementFromPoint(this.$drag.x, this.$drag.y);
-            (goal != this._drop.goal && !goal.matches(this._drop.goal) || goal?.Q('.PI-goal')) && (goal = null);
-            this.target.classList.toggle('PI-reached', goal ? true : false);
-            if (goal == this.goal) return; 
+            let below = document.elementFromPoint(this.$drag.x - scrollX, this.$drag.y - scrollY);
+            (below && below != this._drop.goal && !below.matches(this._drop.goal) || below?.Q('.PI-goal')) && (below = null);
+            this.target.classList.toggle('PI-reached', below ? true : false);
+            if (below == this.goal) return; 
             this.goal?.classList.remove('PI-goal');
-            (this.goal = goal)?.classList.add('PI-goal');
+            (this.goal = below)?.classList.add('PI-goal');
         }
     }}
     #lift (ev) {
@@ -151,7 +152,7 @@ class PointerInteraction { // #private  $data  _user
     }
     #translate (x, y, which = this.target) {
         this.#revert = true;
-        [this.$drag.tx, this.$drag.ty] = [x, y + scrollY - this.$press.scrollY];
+        [this.$drag.tx, this.$drag.ty] = [x, y - this.$press.scrollY];
         which.style.transform = Object.assign(new DOMMatrix(getComputedStyle(which).transform), {
             e: this.$press.initial.e + this.$drag.tx,
             f: this.$press.initial.f + this.$drag.ty, 
