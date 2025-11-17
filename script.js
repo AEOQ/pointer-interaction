@@ -150,11 +150,18 @@ class PointerInteraction { // #private  $data  _user
     }
     #translate (x, y, which = this.target) {
         this.#revert = true;
-        [this.$drag.tx, this.$drag.ty] = [x, y - this.$press.scrollY];
+        [this.$drag.tx, this.$drag.ty] = [x, y - (this.#isFixed(which) ? 0 : this.$press.scrollY)];
         which.style.transform = Object.assign(new DOMMatrix(getComputedStyle(which).transform), {
             e: this.$press.initial.e + this.$drag.tx,
             f: this.$press.initial.f + this.$drag.ty, 
         });
+    }
+    #isFixed (el) {
+        while (el && el !== document.documentElement) {
+            if (getComputedStyle(el).position == 'fixed') return true;
+            el = el.parentElement;
+        }
+        return false;
     }
     #commitSwap = (target, goal) => {
         let place = E('span');
