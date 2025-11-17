@@ -38,7 +38,7 @@ class PointerInteraction { // #private  $data  _user
             initial: new DOMMatrix(getComputedStyle(this.target).transform),
             target: E(this.target).getBoundingPageRect()
         };
-
+        this.targetFixed = this.#isFixed();
         this._hold && (this.#hold.timer = this._hold(new Hold(this)).schedule());
         typeof this._press == 'function' && this._press(this, this.target);
 
@@ -150,7 +150,7 @@ class PointerInteraction { // #private  $data  _user
     }
     #translate (x, y, which = this.target) {
         this.#revert = true;
-        [this.$drag.tx, this.$drag.ty] = [x, y - (this.#isFixed(which) ? 0 : this.$press.scrollY)];
+        [this.$drag.tx, this.$drag.ty] = [x, y - (this.targetFixed ? 0 : this.$press.scrollY)];
         which.style.transform = Object.assign(new DOMMatrix(getComputedStyle(which).transform), {
             e: this.$press.initial.e + this.$drag.tx,
             f: this.$press.initial.f + this.$drag.ty, 
