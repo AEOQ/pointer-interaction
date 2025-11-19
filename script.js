@@ -7,13 +7,7 @@ class PointerInteraction { // #private  $data  _user
         PointerInteraction.to.elements(targets).forEach(el => {
             PointerInteraction.#roots.add(el.getRootNode());
             (this._drag || this._drop) && el.classList.add('PI-draggable');
-            if (!this._scroll) return;
-            el.classList.add('PI-scroll');
-            el.addEventListener('wheel', ev => (ev.deltaY < 0 && el.scrollLeft != 0 
-                || ev.deltaY > 0 && el.scrollLeft != el.scrollWidth - el.clientWidth
-                ) && (el.scrollLeft += ev.deltaY > 0 ? 100 : -100) && ev.preventDefault()
-            );
-            el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
+            this._scroll && this.#scrollable(el);
         });
         this.#revert = this._drag?.revert;
     }
@@ -23,35 +17,48 @@ class PointerInteraction { // #private  $data  _user
         }),
         {set: (target, ...p) => addEventListener(...p) || Reflect.set(target, ...p)}
     )
+    #scrollable (el) {
+        el.classList.add('PI-scrollable');
+        el.addEventListener('wheel', ev => (ev.deltaY < 0 && el.scrollLeft != 0 
+            || ev.deltaY > 0 && el.scrollLeft != el.scrollWidth - el.clientWidth
+            ) && (el.scrollLeft += ev.deltaY > 0 ? 100 : -100) && ev.preventDefault()
+        );
+        el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
+    }
     execute (ev, target) {
         this.target = target ?? ev.target;
         this.#press(ev);
     }
     #press (ev) {
-        if (!this.target || this.target.Q('.PI-target') 
-            || this._scroll && ev.pointerType != 'mouse') return this.#reset();
+        if (!this.target || this.target.Q('.PI-target') || this._scroll && ev.pointerType != 'mouse') 
+            return this.#reset();
         this.target.classList.add('PI-target');
 
         this.$press = {
-            x: ev.pageX, y: ev.pageY,
+            x: ev.clientX, y: ev.clientY,
             sx: this.target.scrollLeft, sy: this.target.scrollTop, scrollY,
-            initial: new DOMMatrix(getComputedStyle(this.target).transform),
-            target: E(this.target).getBoundingPageRect()
+            target: {
+                ...E(this.target).getBoundingPageRect(),
+                transform: new DOMMatrix(getComputedStyle(this.target).transform),
+            }
         };
-        this.targetFixed = this.#isFixed();
         this._hold && (this.#hold.timer = this._hold(new Hold(this)).schedule());
+        Q(this._drop?.goal, []).forEach(el => el.classList.add('PI-droppable'));
+
         typeof this._press == 'function' && this._press(this, this.target);
 
+        this.#events.contextmenu = ev => ev.preventDefault();
         this.#events.pointermove = ev => this.#drag(ev);
         this.#events.pointerup = this.#events.pointercancel = ev => this.#lift(ev);
     }
     #drag (ev) {
         ev.preventDefault();
         if (this.target.Q('.PI-target')) return this.#reset();
-        
+
         this.$drag = {
             ...this.$drag ?? {tx: 0, ty: 0},
-            x: ev.pageX, y: ev.pageY, dx: ev.pageX-this.$press.x, dy: ev.pageY-this.$press.y,
+            x: ev.clientX, y: ev.clientY, 
+            dx: ev.clientX-this.$press.x, dy: ev.clientY-this.$press.y,
         };
         if (Math.hypot(this.$drag.dx, this.$drag.dy) < 5) return;
         this.target.classList.add('PI-dragged');
@@ -60,7 +67,7 @@ class PointerInteraction { // #private  $data  _user
         this._scroll && this.drag.to.scroll(this._scroll === true ? undefined : this._scroll);
         if (this._drop) {
             this.drag.to.translate({x: this._drag?.x, y: this._drag?.y});
-            this.drag.to.scrollPage();
+            this.drag.to.scrollPage({x: this._drag?.x, y: this._drag?.y});
             this.drag.to.findGoal();
         }
         typeof this._drag == 'function' && this._drag(this, this.target, this.goal);
@@ -79,14 +86,21 @@ class PointerInteraction { // #private  $data  _user
             this.target.Q('.PI-selected')?.classList.remove('PI-selected');
             [...children].find(child => E(child).contains(bullseye))?.classList.add('PI-selected');
         },
-        scrollPage: () => {
-            let proportion = (this.$drag.y - scrollY) / innerHeight;
+        scrollPage: axis => {
+            let proportion = this.$drag.y / innerHeight;
             let bottomed = scrollY + innerHeight >= document.body.offsetHeight + 100;
-            proportion < .05 ? scrollBy(0, -4) : 
-            proportion > .95 && !bottomed ? scrollBy(0, 4) : null;
+            let amount = proportion < .05 ? -4 : proportion > .95 && !bottomed ? 4 : 0;
+            if (!amount)
+                return PointerInteraction.loop &&= cancelAnimationFrame(PointerInteraction.loop);
+            let loop = (() => {
+                scrollBy(0, amount);
+                this.drag.to.translate(axis);
+                PointerInteraction.loop = requestAnimationFrame(loop);
+            });
+            PointerInteraction.loop || loop();
         },
         findGoal: () => {
-            let below = document.elementFromPoint(this.$drag.x - scrollX, this.$drag.y - scrollY);
+            let below = document.elementFromPoint(this.$drag.x, this.$drag.y);
             (below && below != this._drop.goal && !below.matches(this._drop.goal) || below?.Q('.PI-goal')) && (below = null);
             this.target.classList.toggle('PI-reached', below ? true : false);
             if (below == this.goal) return; 
@@ -97,7 +111,7 @@ class PointerInteraction { // #private  $data  _user
     #lift (ev) {
         this._scroll && ev.pointerType == 'mouse' && Math.hypot(this.$drag?.dx, this.$drag?.dy) >= 5 && ev.stopPropagation();
         if (!this.target) return this.#reset();
-        this.goal && (this.$lift = {initial: new DOMMatrix(getComputedStyle(this.goal).transform)});
+        this.goal && (this.$lift = {transform: new DOMMatrix(getComputedStyle(this.goal).transform)});
         this._click && !this.target.matches('.PI-dragged') && this.lift.to.click();
 
         typeof this._lift == 'function' && this._lift(this, this.target, this.goal);
@@ -115,7 +129,7 @@ class PointerInteraction { // #private  $data  _user
             if (!this.goal || this.goal == this.target.parentElement) return;
             let appended = this.goal.appendChild(cloned ?? this.target);
             appended.classList.remove(...PointerInteraction.classes);
-            appended.style.transform = this.$press.initial;
+            appended.style.transform = this.$press.target.transform;
         },
         clone: () => this.lift.to.transfer(this.target.cloneNode(true)),
         swap: () => {
@@ -130,10 +144,11 @@ class PointerInteraction { // #private  $data  _user
         },
         revert: () => {
             (this.$drag?.dx > 1 || this.$drag?.dy > 1) && this.target.classList.add('PI-animate');
-            this.target.style.transform = this.$press.initial;
+            this.target.style.transform = this.$press.target.transform;
         }
     }}
     #reset () {
+        PointerInteraction.loop = cancelAnimationFrame(PointerInteraction.loop);
         this.#hold.timer?.forEach(clearTimeout);
         let [target, goal] = [this.target, this.goal];
         this.target = this.goal = null;
@@ -150,47 +165,42 @@ class PointerInteraction { // #private  $data  _user
     }
     #translate (x, y, which = this.target) {
         this.#revert = true;
-        [this.$drag.tx, this.$drag.ty] = [x, y - (this.targetFixed ? 0 : this.$press.scrollY)];
+        [this.$drag.tx, this.$drag.ty] = [x, y + scrollY - this.$press.scrollY];
         which.style.transform = Object.assign(new DOMMatrix(getComputedStyle(which).transform), {
-            e: this.$press.initial.e + this.$drag.tx,
-            f: this.$press.initial.f + this.$drag.ty, 
+            e: this.$press.target.transform.e + this.$drag.tx,
+            f: this.$press.target.transform.f + this.$drag.ty, 
         });
-    }
-    #isFixed (el) {
-        while (el && el !== document.documentElement) {
-            if (getComputedStyle(el).position == 'fixed') return true;
-            el = el.parentElement;
-        }
-        return false;
     }
     #commitSwap = (target, goal) => {
         let place = E('span');
         target.before(place);
         goal.before(target);
         place.replaceWith(goal);
-        target.style.transform = this.$press.initial;
-        goal.style.transform = this.$lift.initial; 
+        target.style.transform = this.$press.target.transform;
+        goal.style.transform = this.$lift.transform; 
         PointerInteraction.swapping = false;
     }
     static #roots = new Set();
     static #css = place => place.Q('#PI') || place.append(E('style#PI', `
         .PI-draggable {touch-action: none; user-select: none;}
-        .PI-dragged {pointer-events:none;}
-        .PI-target {
-            z-index:99; position:relative;
+        .PI-droppable {z-index:0;}
+        .PI-target {pointer-events:none;}
+        .PI-dragged,.PI-scrollable:has(.PI-dragged),
+        .PI-animate,.PI-scrollable:has(.PI-animate) {
+            z-index:1; position:relative;
         }
-        .PI-scroll {
-            overflow:scroll;
-            scrollbar-width:none;
+        .PI-scrollable {
+            overflow:scroll; scrollbar-width:none;
+            contain:layout;
             
             &:has(.PI-target,.PI-animate) {
-                overflow:visible; max-width: 100vw;
+                overflow:visible;
                 transform:translate(calc(var(--scrolledX,0)*-1px),calc(var(--scrolledY,0)*-1px));
             }
         }
         .PI-animate {
-            z-index:98; position:relative;
             transition:transform .5s;
+            
             :has(&) {pointer-events:none;}
         }
     `));
@@ -199,7 +209,10 @@ class PointerInteraction { // #private  $data  _user
     }
     static events = settings => {
         settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
-        PointerInteraction.#roots.forEach(root => root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev, settings)));
+        PointerInteraction.#roots.forEach(root => {
+            PointerInteraction.#css(root instanceof ShadowRoot ? root : document.head);
+            root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev, settings))
+        });
     }
     static #pointerdown = (ev, settings) => {
         let target;
@@ -212,10 +225,9 @@ class PointerInteraction { // #private  $data  _user
             [targets].flat().includes(target = ev.target.assignedSlot)
         );
         if (!pair) return;
-        PointerInteraction.#css(ev.target.getRootNode() instanceof ShadowRoot ? ev.target.getRootNode() : document.head);
         pair[1].execute(ev, target);
     }
-    static classes = ['PI-target', 'PI-dragged', 'PI-reached']
+    static classes = ['PI-droppable', 'PI-target', 'PI-dragged', 'PI-reached']
 }
 class HoldClick {
     constructor(PI) {this.PI = PI;}

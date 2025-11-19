@@ -13,6 +13,7 @@
     nav {
         display:inline-flex; gap:.5em;
         transform:translateX(calc(-100% + 3em));
+        margin-bottom:20em;
 
         &::after {content:'Pull';}
         &::after,a {
@@ -42,7 +43,7 @@
         min-width:3rem; max-width:3rem; height:3rem;
         border:.2rem solid;
         margin:0 .5rem;
-        span {
+        a {
             display:inline-block; font-size:2em;
         }
     }
@@ -63,8 +64,9 @@
     <summary>Show code</summary>
     <code></code>
 </details>
+<div id="drag-promoter" style="position: fixed; width: 1px; height: 1px; opacity: 0;"></div>
 <h2>Stock</h2>
-<ul id="stock"></ul>
+<div><ul id="stock"></ul></div>
 <h2>Zone 1</h2>
 <ul class="zone"></ul>
 <h2>Zone 2</h2>
@@ -76,7 +78,7 @@
 import {A,E,O,Q} from 'https://aeoq.github.io/AEOQ.mjs';
 for (let i = 0; i <= 50; i++) Q('#stock').append(
     E('li', [
-        E('span', `${i}`, {style: {transform: 'rotate(-45deg)'}})
+        E('a', `${i}`, {style: {transform: 'rotate(-45deg)'}})
     ], {
         classList: ['red','lime','blue','aqua','magenta','yellow'][Math.floor(Math.random()*6)],
         style: {transform: 'rotate(45deg)'}}
