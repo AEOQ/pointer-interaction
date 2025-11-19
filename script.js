@@ -182,13 +182,16 @@ class PointerInteraction { // #private  $data  _user
     }
     static #roots = new Set();
     static #css = place => place.Q('#PI') || place.append(E('style#PI', `
-        .PI-draggable {touch-action: none; user-select: none;}
+        .PI-draggable {
+            touch-action: none; user-select: none;
+            a,img {-webkit-user-drag: none;}
+        }
         .PI-droppable {z-index:0;}
-        .PI-target {pointer-events:none;}
         .PI-dragged,.PI-scrollable:has(.PI-dragged),
         .PI-animate,.PI-scrollable:has(.PI-animate) {
             z-index:1; position:relative;
         }
+        .PI-dragged {pointer-events: none;}
         .PI-scrollable {
             overflow:scroll; scrollbar-width:none;
             contain:layout;

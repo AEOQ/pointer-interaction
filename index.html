@@ -15,7 +15,6 @@
         transform:translateX(calc(-100% + 3em));
         margin-bottom:20em;
 
-        &::after {content:'Pull';}
         &::after,a {
             width:3em; height:3em;
             background:lightcoral;
@@ -86,14 +85,15 @@ for (let i = 0; i <= 50; i++) Q('#stock').append(
 import PointerInteraction from './script.js';
 PointerInteraction.events(new O([
     [Q('ul'), { scroll: { x: true } }],
-    [Q('nav'), {
+], {
+    'nav': {
         drag: PI => {
             PI.drag.to.translate({ x: {min: -10, max: Q('nav').clientWidth - 48}, y: false });
             PI.drag.to.select({x: 0}, [...PI.target.children].filter(child => !child.matches(':has(.current)')));
         },
         lift: () => console.log(Q('.PI-selected')?.innerText)
-    }]
-], {
+    }
+}, {
     '.lime': {
         drag: PI => PI.drag.to.translate(),
         lift: PI => PI.lift.to.revert()
