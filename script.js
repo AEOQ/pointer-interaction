@@ -1,7 +1,7 @@
 import {A,E,O,Q} from 'https://aeoq.github.io/AEOQ.mjs';
 
 class PointerInteraction { // #private  $data  _user
-    #click; #hold = {}; #revert; #callback;
+    #click; #hold = {}; #drop = {}; #revert; #callback;
     constructor (targets, actions) {
         Object.assign(this, new O(actions).map(([k, v]) => [`_${k}`, v]));
         PointerInteraction.to.elements(targets).forEach(el => {
@@ -43,7 +43,8 @@ class PointerInteraction { // #private  $data  _user
             }
         };
         this._hold && (this.#hold.timer = this._hold(new Hold(this)).schedule());
-        Q(this._drop?.goal, []).forEach(el => el.classList.add('PI-droppable'));
+        this.#drop.goals = typeof this._drop?.goal == 'string' ? Q(this._drop?.goal, []) : this._drop?.goal;
+        this.#drop.goals?.forEach(el => el.classList.add('PI-droppable'));
 
         typeof this._press == 'function' && this._press(this, this.target);
 
@@ -101,7 +102,8 @@ class PointerInteraction { // #private  $data  _user
         },
         findGoal: () => {
             let below = document.elementFromPoint(this.$drag.x, this.$drag.y);
-            (below && below != this._drop.goal && !below.matches(this._drop.goal) || below?.Q('.PI-goal')) && (below = null);
+            below = below.shadowRoot?.elementFromPoint(this.$drag.x, this.$drag.y) ?? below;
+            (!this.#drop.goals.includes(below) || below.Q('.PI-goal')) && (below = null);
             this.target.classList.toggle('PI-reached', below ? true : false);
             if (below == this.goal) return; 
             this.goal?.classList.remove('PI-goal');
@@ -150,13 +152,14 @@ class PointerInteraction { // #private  $data  _user
     #reset () {
         PointerInteraction.loop = cancelAnimationFrame(PointerInteraction.loop);
         this.#hold.timer?.forEach(clearTimeout);
-        let [target, goal] = [this.target, this.goal];
+        let {target, goal} = this;
         this.target = this.goal = null;
         this.#events.remove();
         this.$drag = null;
         target?.classList.remove(...PointerInteraction.classes);
         goal?.classList.remove('PI-goal');
-        Q('.PI-animate') && setTimeout(() => {
+        Q('.PI-droppable', []).forEach(el => el.classList.remove('PI-droppable'));
+        target.matches('.PI-animate') && setTimeout(() => {
             this.#callback?.(target, goal);
             target?.classList.remove('PI-animate');
             goal?.classList.remove('PI-animate');
@@ -181,54 +184,55 @@ class PointerInteraction { // #private  $data  _user
         PointerInteraction.swapping = false;
     }
     static #roots = new Set();
-    static #css = place => place.Q('#PI') || place.append(E('style#PI', `
+    static #css = () => new CSSStyleSheet().replace(`
         .PI-draggable {
             touch-action: none; user-select: none;
-            a,img {-webkit-user-drag: none;}
+
+            a&,img&,a,img {-webkit-user-drag: none;}
         }
-        .PI-droppable {z-index:0;}
-        .PI-dragged,.PI-scrollable:has(.PI-dragged),
-        .PI-animate,.PI-scrollable:has(.PI-animate) {
-            z-index:1; position:relative;
-        }
-        .PI-dragged {pointer-events: none;}
-        .PI-scrollable {
-            overflow:scroll; scrollbar-width:none;
-            contain:layout;
-            
-            &:has(.PI-target,.PI-animate) {
-                overflow:visible;
-                transform:translate(calc(var(--scrolledX,0)*-1px),calc(var(--scrolledY,0)*-1px));
-            }
+        .PI-dragged,.PI-scrollable:has(:is(.PI-dragged,.PI-animate)) {
+            z-index: 1; position: relative;
         }
         .PI-animate {
-            transition:transform .5s;
-            
-            :has(&) {pointer-events:none;}
+            z-index: 2; position: relative;
         }
-    `));
+        .PI-dragged,.PI-animate {pointer-events: none;}
+        .PI-scrollable {
+            overflow: scroll; scrollbar-width: none;
+            contain: layout;
+            
+            &:has(.PI-target,.PI-animate) {
+                overflow: visible;
+                transform: translate(calc(var(--scrolledX,0)*-1px), calc(var(--scrolledY,0)*-1px));
+            }
+        }
+        .PI-animate {transition: transform .5s;}
+    `);
     static to = {
         elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el).filter(el => el)
     }
     static events = settings => {
         settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
-        PointerInteraction.#roots.forEach(root => {
-            PointerInteraction.#css(root instanceof ShadowRoot ? root : document.head);
+        PointerInteraction.#css().then(css => PointerInteraction.#roots.forEach(root => {
+            root.adoptedStyleSheets.push(css);
             root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev, settings))
-        });
+        }));
     }
     static #pointerdown = (ev, settings) => {
         let target;
-        let pair = settings.find(([targets]) => typeof targets == 'string' ? 
+        let pairs = settings.filter(([targets]) => typeof targets == 'string' ? 
             ev.target.matches(targets) : 
             [targets].flat().includes(ev.target)
         );
-        pair ??= settings.find(([targets]) => typeof targets == 'string' ? 
-            target = ev.target.closest(targets) : 
-            [targets].flat().includes(target = ev.target.assignedSlot)
-        );
-        if (!pair) return;
-        pair[1].execute(ev, target);
+        !pairs.size && (pairs = settings.filter(([targets]) => {
+            let found = typeof targets == 'string' ? 
+                ev.target.closest(targets) : 
+                [targets].flat().includes(ev.target.assignedSlot);
+            found && (target = ev.target.closest(targets) ?? ev.target.assignedSlot);
+            return found;
+        }));
+        if (!pairs.size) return;
+        pairs.each(([, PI]) => PI.execute(ev, target));
     }
     static classes = ['PI-droppable', 'PI-target', 'PI-dragged', 'PI-reached']
 }

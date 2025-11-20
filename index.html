@@ -13,7 +13,7 @@
     nav {
         display:inline-flex; gap:.5em;
         transform:translateX(calc(-100% + 3em));
-        margin-bottom:20em;
+        margin-bottom:1em;
 
         &::after,a {
             width:3em; height:3em;
@@ -63,7 +63,6 @@
     <summary>Show code</summary>
     <code></code>
 </details>
-<div id="drag-promoter" style="position: fixed; width: 1px; height: 1px; opacity: 0;"></div>
 <h2>Stock</h2>
 <div><ul id="stock"></ul></div>
 <h2>Zone 1</h2>
@@ -107,7 +106,7 @@ PointerInteraction.events(new O([
         drop: { goal: 'li' },
         lift: PI => PI.lift.to.swap()
     },
-    '.aqua': {
+    '.aqua,.zone li': {
         drop: { goal: '.zone' },
         lift: PI => PI.lift.to.transfer()
     },
