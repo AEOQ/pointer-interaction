@@ -2,13 +2,6 @@
 <title>Pointer Interaction</title>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<nav>
-    <a>1</a>
-    <a>2</a>
-    <a>3</a>
-    <a>4</a>
-    <a>5</a>
-</nav>
 <style>
     nav {
         display:inline-flex; gap:.5em;
@@ -56,19 +49,41 @@
     .PI-reached {outline:.2em solid chartreuse;}
     .red.PI-target {background:hsl(var(--hue,0),100%,50%);}
     .red.held {background:green;}
-    .PI-goal {background:chartreuse;}
+    .PI-receiving {background:chartreuse;}
+    div {padding:1em; background: gray;}
 </style>
 
+<nav>
+    <a>1</a>
+    <a>2</a>
+    <a>3</a>
+    <a>4</a>
+    <a>5</a>
+</nav>
+<output></output>
+<script>customElements.define('custom-menu',class extends HTMLElement {
+    constructor() {super();this.attachShadow({mode: 'open'}).innerHTML=`
+    <style>a::after {content:attr(href);} a {display:inline-block;}</style>
+    <li><a href=#1></a></li>
+    <li><a href=#2></a></li>
+    <li><a href=#3></a></li>
+    <li><a href=#4></a></li>
+    <li><a href=#5></a></li>
+    <li><a href=#6></a></li>    
+    `}
+});</script>
+<custom-menu>
+</custom-menu>
 <details>
     <summary>Show code</summary>
     <code></code>
 </details>
 <h2>Stock</h2>
-<div><ul id="stock"></ul></div>
+<ul id="stock"></ul>
 <h2>Zone 1</h2>
 <ul class="zone"></ul>
 <h2>Zone 2</h2>
-<ul class="zone"></ul>
+<div><ul class="zone"></ul></div>
 <h2>Zone 3</h2>
 <ul class="zone"></ul>
 
@@ -84,30 +99,35 @@ for (let i = 0; i <= 50; i++) Q('#stock').append(
 import PointerInteraction from './script.js';
 PointerInteraction.events(new O([
     [Q('ul'), { scroll: { x: true } }],
+    [Q('custom-menu').sQ('a'), { 
+        drop: { onto: Q('custom-menu').sQ('a') }, 
+        lift: PI => PI.lift.to.swap() 
+    }],
 ], {
     'nav': {
         drag: PI => {
             PI.drag.to.translate({ x: {min: -10, max: Q('nav').clientWidth - 48}, y: false });
-            PI.drag.to.select({x: 0}, [...PI.target.children].filter(child => !child.matches(':has(.current)')));
+            PI.drag.to.select({x: 0}).from([...PI.target.children].filter(child => !child.matches(':has(.current)')));
         },
-        lift: () => console.log(Q('.PI-selected')?.innerText)
+        lift: (PI, _, selected) => Q('output').innerText = selected?.innerText
     }
 }, {
     '.lime': {
         drag: PI => PI.drag.to.translate(),
-        lift: PI => PI.lift.to.revert()
+        drop: {onto: '.zone,div'},
+        lift: (PI,_,onto) =>  PI.lift.to.revert()
     },
     '.blue': {
-        drop: { goal: '.zone' },
+        drop: { onto: '.zone' },
         drag: { x: false, y: { min: PI => PI.$drag.ty - PI.target.getBoundingClientRect().top - scrollY } },
         lift: PI => PI.lift.to.clone()
     },
     '.magenta,.zone li': {
-        drop: { goal: 'li' },
+        drop: { onto: 'li' },
         lift: PI => PI.lift.to.swap()
     },
     '.aqua,.zone li': {
-        drop: { goal: '.zone' },
+        drop: { onto: '.zone' },
         lift: PI => PI.lift.to.transfer()
     },
     '.yellow': {
@@ -120,7 +140,7 @@ PointerInteraction.events(new O([
         hold: hold => hold
             .for(0.5).to(PI => PI.target.classList.add('held'))
             .for(1.5).to(PI => PI.target.style.background = 'black'),
-        drop: { goal: '.zone' },
+        drop: { onto: '.zone' },
         drag: PI => PI.target.style.setProperty('--hue', PI.$drag.x - PI.$press.x),
         lift: PI => PI.target.matches('.held') && PI.lift.to.clone()
     },
