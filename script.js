@@ -197,7 +197,7 @@ class PointerInteraction { // #private  $data  _user
     }
     #revertTransform = (...pairs) => pairs.forEach(([el, snapshot]) => el.style.transform = snapshot.transform);
     static #roots = new Set();
-    static #css = () => new CSSStyleSheet().replace(`
+    static #css = new CSSStyleSheet().replace(`
         .PI-draggable,.PI-target {
             touch-action: none; user-select: none;
 
@@ -226,7 +226,7 @@ class PointerInteraction { // #private  $data  _user
     }
     static events = settings => {
         settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
-        PointerInteraction.#css().then(css => PointerInteraction.#roots.forEach(root => {
+        PointerInteraction.#css.then(css => PointerInteraction.#roots.forEach(root => {
             root.adoptedStyleSheets.push(css);
             root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev, settings))
         }));
