@@ -20,9 +20,10 @@ class PointerInteraction { // #private  $data  _user
     #setup = {
         scrollable (el) {
             el.classList.add('PI-scrollable');
-            el.addEventListener('wheel', ev => 
-                (ev.deltaY < 0 && el.scrollLeft != 0 || ev.deltaY > 0 && el.scrollLeft != el.scrollWidth - el.clientWidth) 
-                && (el.scrollLeft += ev.deltaY > 0 ? 100 : -100) && ev.preventDefault()
+            el.addEventListener('wheel', ev => (
+                ev.deltaY < 0 && el.scrollLeft > 0 || 
+                ev.deltaY > 0 && Math.ceil(el.scrollLeft) < el.scrollWidth - el.clientWidth
+                ) && (el.scrollLeft += ev.deltaY > 0 ? 100 : -100) && ev.preventDefault()
             );
             el.addEventListener('scroll', () => E(el).set({'--scrolledX': el.scrollLeft, '--scrolledY': el.scrollTop}));
         },
