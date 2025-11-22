@@ -242,7 +242,7 @@ class PointerInteraction { // #private  $data  _user
             let found = typeof targets == 'string' ? 
                 ev.target.closest(targets) : 
                 [targets].flat().includes(ev.target.assignedSlot);
-            found && (target = ev.target.closest(targets) ?? ev.target.assignedSlot);
+            found && (target = typeof targets == 'string' ? found : ev.target.assignedSlot);
             return found;
         }));
         if (!pairs.size) return;
