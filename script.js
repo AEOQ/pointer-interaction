@@ -173,7 +173,7 @@ class PointerInteraction { // #private  $data  _user
         this.$drag = null;
         target?.classList.remove(...PointerInteraction.classes.target);
         this.#drop?.onto?.forEach(el => el.classList.remove(...PointerInteraction.classes.onto));
-        target.matches('.PI-animate') && setTimeout(() => {
+        target?.matches('.PI-animate') && setTimeout(() => {
             this.#callback?.(target, onto);
             target?.classList.remove('PI-animate');
             onto?.classList.remove('PI-animate');
