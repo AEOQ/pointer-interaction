@@ -84,8 +84,8 @@ class PointerInteraction { // #private  $data  _user
     }
     drag = {to: {
         scroll: (axis = {x: true, y: true}) => this.target.scrollTo(
-            this.$press.snapshot.target.sx - (axis.x ? this.$drag.dx : 0), 
-            this.$press.snapshot.target.sy - (axis.y ? this.$drag.dy : 0)
+            Math.max(0, this.$press.snapshot.target.sx - (axis.x ? this.$drag.dx : 0)), 
+            Math.max(0, this.$press.snapshot.target.sy - (axis.y ? this.$drag.dy : 0))
         ),
         select: bullseye => {
             this.target.Q('.PI-selected')?.classList.remove('PI-selected');
