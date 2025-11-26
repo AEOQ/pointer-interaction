@@ -9,7 +9,7 @@ class PointerInteraction { // #private  $data  _user
             (this._drag || this._drop) && el.classList.add('PI-draggable');
             this._scroll && this.#setup.scrollable(el);
         });
-        this.#revert = this._drag?.revert;
+        this.#revert = this._revert ?? true;
     }
     #events = new Proxy(
         Object.defineProperty({}, 'remove', {
@@ -181,7 +181,6 @@ class PointerInteraction { // #private  $data  _user
         }, 500);
     }
     #translate (x, y, which = this.target) {
-        this.#revert = true;
         [this.$drag.tx, this.$drag.ty] = [x, y + scrollY - this.$press.scrollY];
         which.style.transform = Object.assign(new DOMMatrix(getComputedStyle(which).transform), {
             e: this.$press.snapshot.target.transform.e + this.$drag.tx,
