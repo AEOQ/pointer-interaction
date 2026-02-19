@@ -91,7 +91,9 @@ class PointerInteraction { // #private  $data  _user
             this.target.Q('.PI-selected')?.classList.remove('PI-selected');
             this._drag.bullseye ??= bullseye;
             return {from: children => {
-                this._drag.from ??= [...children ?? this.target.children];
+                typeof children == 'function' ? 
+                    this._drag.from = [...children()] :
+                    this._drag.from ??= [...children ?? this.target.children];
                 this.onto = this._drag.from.find(child => E(child).contains(bullseye));
                 this.onto?.classList.add('PI-selected');
             }};
