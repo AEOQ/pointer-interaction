@@ -140,9 +140,9 @@ class PointerInteraction { // #private  $data  _user
     lift = {to: {
         click: () => {
             this.#click ??= this._click(new Click(this));
-            this.target.clicked = new Date() - this.target.lastClicked <= 350 ? this.target.clicked + 1 : 1;
-            this.target.lastClicked = new Date();
-            this.#click.fire(this.target.clicked);
+            this.#click.count = new Date() - this.#click.lastClicked <= 350 ? this.#click.count + 1 : 1;
+            this.#click.lastClicked = new Date();
+            this.#click.fire(this.#click.count);
         },
         transfer: cloned => {
             if (!this.onto || this.onto == this.target.parentElement) return;
@@ -226,28 +226,35 @@ class PointerInteraction { // #private  $data  _user
     static to = {
         elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el).filter(el => el)
     }
-    static events = settings => {
-        settings = new O(settings).map(([targets, actions]) => [targets, new PointerInteraction(targets, actions)]);
-        PointerInteraction.#css.then(css => PointerInteraction.#roots.forEach(root => {
-            root.adoptedStyleSheets.push(css);
-            root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev, settings))
-        }));
+    static events = config => {
+        if (!PointerInteraction.config) {
+            PointerInteraction.config = new Map();
+            PointerInteraction.#css.then(css => PointerInteraction.#roots.forEach(root => {
+                root.adoptedStyleSheets.push(css);
+                root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev));
+            }));
+        }
+        new O(config).each(([targets, actions]) => {
+            let acts = PointerInteraction.config.get(targets) ?? [];
+            acts.length === 0 && PointerInteraction.config.set(targets, acts);
+            acts.push(new PointerInteraction(targets, actions));
+        });
     }
-    static #pointerdown = (ev, settings) => {
+    static #pointerdown = (ev, config = PointerInteraction.config) => {
         let target;
-        let pairs = settings.filter(([targets]) => typeof targets == 'string' ? 
+        let pairs = [...config].filter(([targets]) => typeof targets == 'string' ? 
             ev.target.matches(targets) : 
             [targets].flat().includes(ev.target)
         );
-        !pairs.size && (pairs = settings.filter(([targets]) => {
+        !pairs.length && (pairs = [...config].filter(([targets]) => {
             let found = typeof targets == 'string' ? 
                 ev.target.closest(targets) : 
                 [targets].flat().includes(ev.target.assignedSlot);
             found && (target = typeof targets == 'string' ? found : ev.target.assignedSlot);
             return found;
         }));
-        if (!pairs.size) return;
-        pairs.each(([, PI]) => PI.execute(ev, target));
+        if (!pairs.length) return;
+        pairs.forEach(([, PIs]) => PIs.forEach(PI => PI.execute(ev, target)));
     }
     static classes = {
         target: ['PI-target', 'PI-dragged', 'PI-reached'],
@@ -271,9 +278,9 @@ class Click extends HoldClick {
     abort = () => this.actions.at(-1).push(true) && this;
     fire = () => {
         let target = this.PI.target;
-        this.#timers.forEach(([times, timer]) => times < target.clicked && clearTimeout(timer));
-        this.actions.forEach(([times, action, abort]) => target.clicked == times && 
-            this.#timers.push([target.clicked, setTimeout(() => action(this.PI, target), abort ? 350 : 0)]));
+        this.#timers.forEach(([times, timer]) => times < this.count && clearTimeout(timer));
+        this.actions.forEach(([times, action, abort]) => this.count == times && 
+            this.#timers.push([this.count, setTimeout(() => action(this.PI, target), abort ? 350 : 0)]));
     }
 }
 export default PointerInteraction
