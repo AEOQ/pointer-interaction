@@ -227,18 +227,17 @@ class PointerInteraction { // #private  $data  _user
         elements: els => [els].flat().flatMap(el => typeof el == 'string' ? Q(el) : el).filter(el => el)
     }
     static events = config => {
-        if (!PointerInteraction.config) {
-            PointerInteraction.config = new Map();
-            PointerInteraction.#css.then(css => PointerInteraction.#roots.forEach(root => {
-                root.adoptedStyleSheets.push(css);
-                root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev));
-            }));
-        }
+        PointerInteraction.config ??= new Map();
         new O(config).each(([targets, actions]) => {
             let acts = PointerInteraction.config.get(targets) ?? [];
             acts.length === 0 && PointerInteraction.config.set(targets, acts);
             acts.push(new PointerInteraction(targets, actions));
         });
+        PointerInteraction.#css.then(css => PointerInteraction.#roots.forEach(root => {
+            root.adoptedStyleSheets.includes(css) || root.adoptedStyleSheets.concat(css) &&
+            root.addEventListener('pointerdown', ev => PointerInteraction.#pointerdown(ev));
+        }));
+
     }
     static #pointerdown = (ev, config = PointerInteraction.config) => {
         let target;
