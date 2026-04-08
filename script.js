@@ -2,9 +2,9 @@ import {A,E,O,Q} from 'https://aeoq.github.io/AEOQ.mjs';
 
 class PointerInteraction { // #private  $data  _user
     #click; #hold = {}; #drop = {}; #revert; #callback;
+    static #roots = new Set();
     constructor (targets, actions) {
         Object.assign(this, new O(actions).map(([k, v]) => [`_${k}`, v]));
-        PointerInteraction.#roots ??= new Set();
         PointerInteraction.to.elements(targets).forEach(el => {
             PointerInteraction.#roots.add(el.getRootNode());
             (this._drag || this._drop) && el.classList.add('PI-draggable');
