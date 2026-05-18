@@ -245,7 +245,7 @@ class PointerInteraction { // #private  $data  _user
             ev.target.matches(targets) : 
             [targets].flat().includes(ev.target)
         );
-        !pairs.length && (pairs = [...config].filter(([targets]) => {
+        pairs.push(...[...config].filter(([targets]) => {
             let found = typeof targets == 'string' ? 
                 ev.target.closest(targets) : 
                 [targets].flat().includes(ev.target.assignedSlot);
