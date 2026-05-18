@@ -239,22 +239,14 @@ class PointerInteraction { // #private  $data  _user
         }));
 
     }
-    static #pointerdown = (ev, config = PointerInteraction.config) => {
-        let target;
-        let pairs = [...config].filter(([targets]) => typeof targets == 'string' ? 
-            ev.target.matches(targets) : 
-            [targets].flat().includes(ev.target)
-        );
-        pairs.push(...[...config].filter(([targets]) => {
-            let found = typeof targets == 'string' ? 
-                ev.target.closest(targets) : 
-                [targets].flat().includes(ev.target.assignedSlot);
-            found && (target = typeof targets == 'string' ? found : ev.target.assignedSlot);
-            return found;
-        }));
-        if (!pairs.length) return;
-        pairs.forEach(([, PIs]) => PIs.forEach(PI => PI.execute(ev, target)));
-    }
+    static #pointerdown = (ev, config = PointerInteraction.config) => [...config]
+        .map(([targets, conf]) => {
+            if (typeof targets == 'string')
+                return [ev.target.closest(targets), conf];
+            let target = ev.target.assignedSlot ?? ev.target;
+            return [[targets].flat().includes(target) && target, conf];
+        })
+        .forEach(([el, PIs]) => el && PIs.forEach(PI => PI.execute(ev, el)));
     static classes = {
         target: ['PI-target', 'PI-dragged', 'PI-reached'],
         onto: ['PI-droppable', 'PI-receiving']
