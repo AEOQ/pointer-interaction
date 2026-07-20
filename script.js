@@ -163,7 +163,7 @@ class PointerInteraction { // #private  $data  _user
             this.#callback = this.#commitSwap;
         },
         revert: () => {
-            Math.hypot(this.$drag?.dx, this.$drag?.dy) >= 1 && this.target.classList.add('PI-animate');
+            Math.hypot(this.$drag?.dx, this.$drag?.dy) >= 1 && this.animate !== false && this.target.classList.add('PI-animate');
             this.#revertTransform([this.target, this.$press.snapshot.target]);
         }
     }}
